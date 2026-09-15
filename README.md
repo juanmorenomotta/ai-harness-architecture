@@ -151,8 +151,14 @@ es un error real que se cometió al construir este harness:
 | :--- | :--- | :--- |
 | **DeepSeek V4 Flash** | `DenizhanDaklr.copilot-vscode-deepseek` | `model: "DeepSeek V4 Flash (deepseek)"` + `model_id` |
 
-**DeepSeek V4 Flash está operativo y con saldo**, usando tool calling (verificado por
-el propio uso: `run_in_terminal`, `replace_string_in_file`, etc.).
+**DeepSeek V4 Flash está operativo y con saldo**, usando tool calling (verificado por el
+propio uso: `run_in_terminal`, `replace_string_in_file`, etc.). El agente
+`.github/agents/sdd-verifier.agent.md` aparece correctamente en el selector de agentes del chat,
+lo que confirma que el frontmatter acepta el nombre cualificado de un modelo aportado por
+extensión.
+
+Las decisiones sobre este punto están registradas en
+[`.spec/_harness/ADR/`](./.spec/_harness/ADR/README.md).
 
 El catálogo completo y su procedencia están en `.harness/models.yaml` → `catalog.copilot`.
 

@@ -14,6 +14,11 @@
 # acepta el frontmatter ("<name> (<vendor>)") y `model_id` el id limpio, que es
 # el que se valida contra el catálogo.
 #
+# DECISIONES REGISTRADAS en .spec/_harness/ADR/:
+#   ADR-001 — el nombre se valida contra el catálogo del RUNTIME (nativo + extensión),
+#             no contra la documentación de una API.
+#   ADR-002 — DeepSeek V4 Flash (extensión) como modelo del rol sdd-verifier.
+#
 # ---------------------------------------------------------------------------
 # LECCIONES APRENDIDAS (2026-09-15) — no repetir estos dos errores:
 #
