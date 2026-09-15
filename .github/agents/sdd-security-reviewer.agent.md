@@ -1,6 +1,6 @@
 ---
 description: "Análisis adversario del diff buscando vulnerabilidades y secretos. Use when reviewing a change for security, checking for leaked credentials, injection, insecure deserialization, or new risky dependencies."
-model: "DeepSeek V4 Pro"
+model: "Claude Sonnet 5 (anthropic)"
 tools: ['read', 'search', 'todo']
 reasoning-effort: "high"
 ---

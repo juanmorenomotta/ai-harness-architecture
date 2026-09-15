@@ -63,9 +63,6 @@ EXPECTED_ROLES = [
     "sdd-security-reviewer",
 ]
 
-# Modelos locales permitidos solo en roles de bajo riesgo (Nivel 1).
-ROLES_SIN_MODELO_LOCAL = {"sdd-verifier", "sdd-security-reviewer"}
-
 MODEL_IN_PROMPT = re.compile(
     r"\b(gpt-[0-9][\w.\-]*|claude-[\w.\-]+|gemini-[\w.\-]+|qwen[\w.\-]*|"
     r"llama[\w.\-]*|mistral[\w.\-]*|deepseek-[\w.\-]+)\b",
@@ -168,46 +165,144 @@ def check_roles_declared(report: Report, roles_cfg: dict) -> None:
             report.error(f"rol '{role}' sin prompt en {AGENTS_DIR}/{role}.md")
 
 
-def _check_single_role(report: Report, role: str, cfg: object, provider_names: set[str]) -> None:
-    """Valida la coherencia de un rol individual."""
+def _catalog_ids(entry: object) -> tuple[set[str], set[str]]:
+    """Extrae (ids, ids_de_extension) de la entrada de catálogo de un runtime."""
+    ids: set[str] = set()
+    from_extension: set[str] = set()
+
+    if isinstance(entry, dict):
+        items = entry.get("models") or []
+    elif isinstance(entry, list):
+        items = entry
+    else:
+        return ids, from_extension
+
+    for item in items:
+        if isinstance(item, dict):
+            model_id = item.get("id")
+            if not model_id:
+                continue
+            ids.add(str(model_id))
+            if str(item.get("provided_by", "")).startswith("extension:"):
+                from_extension.add(str(model_id))
+        elif item:
+            ids.add(str(item))
+
+    return ids, from_extension
+
+
+def runtime_catalog(models: dict) -> tuple[str, set[str], set[str]]:
+    """Devuelve (runtime, ids válidos, ids aportados por extensión).
+
+    El catálogo válido es el del RUNTIME que ejecuta los agentes, y tiene DOS
+    procedencias que hay que considerar juntas:
+      - nativos: los sirve el propio GitHub Copilot
+      - de extensión: los aporta una extensión vía languageModelChatProviders
+    Mirar solo los nativos lleva a concluir por error que un modelo no existe.
+    """
+    runtime = str(models.get("active_runtime") or "")
+    catalog = models.get("catalog") or {}
+    entry = catalog.get(runtime) if isinstance(catalog, dict) else None
+    ids, from_extension = _catalog_ids(entry)
+    return runtime, ids, from_extension
+
+
+def _check_role_catalog(
+    report: Report,
+    role: str,
+    provided: str,
+    runtime: str,
+    valid_ids: set[str],
+    from_extension: set[str],
+    declares_provider: bool,
+) -> None:
+    """Comprueba que el modelo del rol existe en el catálogo del runtime."""
+    if not valid_ids:
+        return
+
+    if provided not in valid_ids:
+        report.error(
+            f"'{role}': el modelo '{provided}' no está en el catálogo del runtime "
+            f"'{runtime}'. Válidos: {', '.join(sorted(valid_ids))}"
+        )
+        return
+
+    # Un modelo de extensión solo se valida si queda registrado de dónde sale.
+    if provided in from_extension and not declares_provider:
+        report.warn(
+            f"'{role}': '{provided}' lo aporta una extensión de terceros, no el "
+            "catálogo nativo. Declarar 'provided_by' en models.yaml."
+        )
+
+
+def _check_role_fallbacks(
+    report: Report, role: str, model: str, fallback: object, runtime: str, valid_ids: set[str]
+) -> None:
+    """Valida la lista de reserva de un rol."""
+    if not isinstance(fallback, list):
+        return
+
+    if model in fallback:
+        report.warn(f"'{role}': el fallback incluye el modelo principal")
+
+    for alt in fallback:
+        if valid_ids and str(alt) not in valid_ids:
+            report.warn(
+                f"'{role}': el fallback '{alt}' tampoco está en el catálogo de "
+                f"'{runtime}'; no serviría si el principal falla"
+            )
+
+
+def _check_single_role(
+    report: Report,
+    role: str,
+    cfg: object,
+    runtime: str,
+    valid_ids: set[str],
+    from_extension: set[str],
+) -> None:
+    """Valida un rol contra el catálogo del runtime, con su procedencia."""
     if not isinstance(cfg, dict):
-        report.error(f"'{role}': la entrada debe ser un mapa con model/provider")
+        report.error(f"'{role}': la entrada debe ser un mapa con model/runtime")
         return
 
     model = cfg.get("model")
-    provider = cfg.get("provider")
-
     if not model:
         report.error(f"'{role}': sin campo 'model' (la asignación vive solo aquí)")
-    if not provider:
-        report.error(f"'{role}': sin campo 'provider'")
         return
 
-    if provider not in provider_names:
-        report.error(
-            f"'{role}': proveedor '{provider}' no está definido en providers.yaml "
-            f"(disponibles: {', '.join(sorted(provider_names)) or 'ninguno'})"
-        )
-    if provider == "local" and role in ROLES_SIN_MODELO_LOCAL:
-        report.error(
-            f"'{role}': Nivel 1 prohíbe modelos locales en este rol; "
-            "la verificación exige el máximo criterio disponible"
+    # Un modelo de extensión lleva el nombre cualificado en `model` y el id
+    # limpio en `model_id`: hay que validar contra el id.
+    provided = str(cfg.get("model_id") or model)
+    if (cfg.get("runtime") or runtime) == runtime:
+        _check_role_catalog(
+            report,
+            role,
+            provided,
+            runtime,
+            valid_ids,
+            from_extension,
+            declares_provider=bool(cfg.get("provided_by")),
         )
 
     reasoning = cfg.get("reasoning")
     if reasoning and reasoning not in {"low", "medium", "high"}:
         report.warn(f"'{role}': reasoning '{reasoning}' fuera de low|medium|high")
 
-    fallback = cfg.get("fallback") or []
-    if isinstance(fallback, list) and model in fallback:
-        report.warn(f"'{role}': el fallback incluye el modelo principal")
+    _check_role_fallbacks(report, role, str(model), cfg.get("fallback"), runtime, valid_ids)
 
 
-def check_role_provider_pairs(report: Report, roles_cfg: dict, provider_names: set[str]) -> None:
-    """Coherencia entre cada rol, su modelo y el proveedor declarado."""
+def check_role_provider_pairs(report: Report, roles_cfg: dict, models: dict) -> None:
+    """Coherencia entre cada rol y el catálogo del runtime activo."""
+    runtime, valid_ids, from_extension = runtime_catalog(models)
+    if not runtime:
+        report.error("models.yaml: falta 'active_runtime' (¿qué runtime ejecuta los agentes?)")
+    elif not valid_ids:
+        report.error(f"models.yaml: 'catalog.{runtime}.models' está vacío o mal formado")
+
     for role, cfg in roles_cfg.items():
         report.tick()
-        _check_single_role(report, role, cfg, provider_names)
+        _check_single_role(report, role, cfg, runtime, valid_ids, from_extension)
 
 
 def check_layer_separation(report: Report, allowed_aliases: set[str]) -> None:
@@ -314,34 +409,31 @@ def _check_single_skill(report: Report, skill_file: Path) -> None:
         )
 
 
-def check_adapters_synced(report: Report, roles_cfg: dict) -> None:
+def copilot_name_map(alias_block: dict) -> set[str]:
+    """Nombres de modelo válidos en el selector de Copilot (valores del model_map)."""
+    copilot = alias_block.get("copilot") if isinstance(alias_block, dict) else None
+    if not isinstance(copilot, dict):
+        return set()
+    model_map = copilot.get("model_map")
+    if not isinstance(model_map, dict):
+        return set()
+    return {str(v) for v in model_map.values()}
+
+
+def check_adapters_synced(report: Report, roles_cfg: dict, alias_block: dict) -> None:
     """Los adaptadores deben cubrir todos los modelos configurados."""
     configured = {str(c.get("model")) for c in roles_cfg.values() if isinstance(c, dict)}
 
-    # Claude Code: allowlist explícita de modelos.
-    report.tick()
-    claude_settings = ROOT / ".claude" / "settings.json"
-    if not claude_settings.exists():
-        report.warn(".claude/settings.json ausente: ejecuta bash scripts/sync-adapters.sh")
-    else:
-        try:
-            settings = json.loads(claude_settings.read_text(encoding="utf-8"))
-            allowlist = set(settings.get("availableModels") or [])
-            missing = configured - allowlist
-            if missing:
-                report.error(
-                    "adaptadores desincronizados: estos modelos no están en la allowlist de "
-                    f"Claude Code: {', '.join(sorted(missing))}. Ejecuta scripts/sync-adapters.sh"
-                )
-        except json.JSONDecodeError as exc:
-            report.error(f".claude/settings.json no es JSON válido: {exc}")
-
-    # GitHub Copilot: un agente por rol, con frontmatter válido.
+    # GitHub Copilot: un agente por rol, con frontmatter válido. El `model` debe
+    # coincidir con el nombre cualificado que traduce routing.yaml, porque el
+    # frontmatter no acepta el slug pelado de un modelo de extensión.
     report.tick()
     copilot_dir = ROOT / ".github" / "agents"
     if not copilot_dir.exists():
         report.warn(".github/agents/ ausente: ejecuta bash scripts/sync-adapters.sh")
         return
+
+    copilot_names = copilot_name_map(alias_block)
 
     for role in EXPECTED_ROLES:
         agent_file = copilot_dir / f"{role}.agent.md"
@@ -349,10 +441,35 @@ def check_adapters_synced(report: Report, roles_cfg: dict) -> None:
             report.error(f"falta el agente de Copilot para '{role}': .github/agents/{role}.agent.md")
             continue
         fm = frontmatter(agent_file)
-        if not fm.get("model"):
+        model = fm.get("model")
+        if not model:
             report.error(f"{agent_file.relative_to(ROOT)}: sin campo 'model' en el frontmatter")
+        elif copilot_names and str(model) not in copilot_names:
+            report.error(
+                f"{agent_file.relative_to(ROOT)}: el modelo '{model}' no está en "
+                "aliases.copilot.model_map (.harness/routing.yaml). "
+                f"Válidos: {', '.join(sorted(copilot_names))}"
+            )
         if not fm.get("description"):
             report.error(f"{agent_file.relative_to(ROOT)}: sin 'description' (no será descubrible)")
+
+    # Claude Code: allowlist explícita de modelos.
+    report.tick()
+    claude_settings = ROOT / ".claude" / "settings.json"
+    if not claude_settings.exists():
+        report.warn(".claude/settings.json ausente: ejecuta bash scripts/sync-adapters.sh")
+        return
+    try:
+        settings = json.loads(claude_settings.read_text(encoding="utf-8"))
+        allowlist = set(settings.get("availableModels") or [])
+        missing = configured - allowlist
+        if missing:
+            report.error(
+                "adaptadores desincronizados: estos modelos no están en la allowlist de "
+                f"Claude Code: {', '.join(sorted(missing))}. Ejecuta scripts/sync-adapters.sh"
+            )
+    except json.JSONDecodeError as exc:
+        report.error(f".claude/settings.json no es JSON válido: {exc}")
 
 
 def check_harness_config(report: Report) -> None:
@@ -399,7 +516,6 @@ def validate(report: Report) -> None:
 
     try:
         models = harness_yaml.load(str(ROOT / MODELS_FILE))
-        providers = harness_yaml.load(str(ROOT / PROVIDERS_FILE))
         routing = harness_yaml.load(str(ROOT / ROUTING_FILE))
     except (OSError, ValueError) as exc:
         report.error(f"BLOQUEO: no se pudo leer la configuración: {exc}")
@@ -423,12 +539,12 @@ def validate(report: Report) -> None:
             allowed_aliases.update(k for k in cli_cfg if not k.endswith("_map"))
 
     check_roles_declared(report, roles_cfg)
-    check_role_provider_pairs(report, roles_cfg, set((providers.get("providers") or {}).keys()))
+    check_role_provider_pairs(report, roles_cfg, models)
     check_layer_separation(report, allowed_aliases)
     check_permissions(report, permissions)
     check_law_rules(report)
     check_skills_referenced(report)
-    check_adapters_synced(report, roles_cfg)
+    check_adapters_synced(report, roles_cfg, alias_block)
     check_harness_config(report)
     check_no_secrets(report)
 

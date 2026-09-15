@@ -7,21 +7,21 @@ version: "1.0.0"
 agents:
   sdd-developer:
     tier: "flash"
-    model_hint: "deepseek-flash"   # informativo; el motor usa el tier
-    provider: "deepseek"
+    model_hint: "gpt-5.3-codex"   # informativo; el motor usa el tier
+    provider: ""
   sdd-init:
     tier: "pro"
-    model_hint: "deepseek-v4-pro"   # informativo; el motor usa el tier
-    provider: "deepseek"
+    model_hint: "claude-sonnet-5"   # informativo; el motor usa el tier
+    provider: ""
   sdd-security-reviewer:
     tier: "pro"
-    model_hint: "deepseek-v4-pro"   # informativo; el motor usa el tier
-    provider: "deepseek"
+    model_hint: "claude-sonnet-5"   # informativo; el motor usa el tier
+    provider: ""
   sdd-tech-lead:
     tier: "pro"
-    model_hint: "deepseek-v4-pro"   # informativo; el motor usa el tier
-    provider: "deepseek"
+    model_hint: "gpt-5.6-terra"   # informativo; el motor usa el tier
+    provider: ""
   sdd-verifier:
     tier: "pro"
-    model_hint: "deepseek-v4-pro"   # informativo; el motor usa el tier
-    provider: "deepseek"
+    model_hint: "DeepSeek V4 Flash (deepseek)"   # informativo; el motor usa el tier
+    provider: ""

@@ -4,15 +4,15 @@
 [model]
 # Codex ejecuta un modelo por sesión; la asignación por rol se resuelve
 # pasando --model en cada invocación desde el orquestador.
-default = "deepseek-v4-pro"
+default = "DeepSeek V4 Flash (deepseek)"
 reasoning_effort = "high"
 
 [agents]
-sdd-developer = { model = "deepseek-flash", reasoning = "medium" }
-sdd-init = { model = "deepseek-v4-pro", reasoning = "high" }
-sdd-security-reviewer = { model = "deepseek-v4-pro", reasoning = "high" }
-sdd-tech-lead = { model = "deepseek-v4-pro", reasoning = "high" }
-sdd-verifier = { model = "deepseek-v4-pro", reasoning = "high" }
+sdd-developer = { model = "gpt-5.3-codex", reasoning = "medium" }
+sdd-init = { model = "claude-sonnet-5", reasoning = "high" }
+sdd-security-reviewer = { model = "claude-sonnet-5", reasoning = "high" }
+sdd-tech-lead = { model = "gpt-5.6-terra", reasoning = "high" }
+sdd-verifier = { model = "DeepSeek V4 Flash (deepseek)", reasoning = "high" }
 
 [safety]
 # R3/R4 del AGENTS.md raíz

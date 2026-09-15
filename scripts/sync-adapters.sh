@@ -188,7 +188,12 @@ row_for() { # rol, clave
 }
 
 model_for()       { row_for "$1" "model"; }
-provider_for()    { row_for "$1" "provider"; }
+# `model_id` permite separar el nombre que acepta el selector (que puede ser
+# cualificado, p. ej. "DeepSeek V4 Flash (deepseek)") del id limpio que esperan
+# los adaptadores que llaman a una API por nombre de modelo.
+model_id_for()    { v="$(row_for "$1" "model_id")"; [ -n "$v" ] && echo "$v" || model_for "$1"; }
+runtime_for()     { v="$(row_for "$1" "runtime")"; [ -n "$v" ] && echo "$v" || echo "${ACTIVE_RUNTIME:-copilot}"; }
+provider_for()    { v="$(row_for "$1" "provider")"; [ -n "$v" ] && echo "$v" || row_for "$1" "provider_vendor"; }
 reasoning_for()   { v="$(row_for "$1" "reasoning")"; [ -n "$v" ] && echo "$v" || echo "medium"; }
 temperature_for() { v="$(row_for "$1" "temperature")"; [ -n "$v" ] && echo "$v" || echo "0.2"; }
 
@@ -198,6 +203,10 @@ if [ -z "$MODEL_ROWS" ]; then
   fail "BLOQUEO: no se pudo leer ningún rol de $MODELS. Revisar el formato/indentación."
   exit 2
 fi
+
+# Runtime activo declarado en models.yaml (informa la resolución de nombres).
+ACTIVE_RUNTIME="$(printf '%s\n' "$MODEL_ROWS" | awk -F'\t' '$1=="GLOBAL" && $2=="active_runtime" {print $3; exit}')"
+[ -n "$ACTIVE_RUNTIME" ] || ACTIVE_RUNTIME="copilot"
 
 ROLES="$(printf '%s\n' "$MODEL_ROWS" | awk -F'\t' '$1 != "GLOBAL" {print $1}' | sort -u | awk 'NF')"
 
@@ -372,9 +381,10 @@ copilot_tools_for() {
 }
 
 for role in $ROLES; do
-  raw_model="$(model_for "$role")"
+  # Para el frontmatter hay que resolver el id limpio -> nombre del selector.
+  raw_model="$(model_id_for "$role")"
   cop_model="$(copilot_model_for "$raw_model")"
-  [ -z "$cop_model" ] && cop_model="$raw_model"
+  [ -z "$cop_model" ] && cop_model="$(model_for "$role")"
   target=".github/agents/${role}.agent.md"
 
   {

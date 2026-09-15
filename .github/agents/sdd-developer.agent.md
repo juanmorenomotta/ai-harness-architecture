@@ -1,6 +1,6 @@
 ---
 description: "Implementa UNA tarea atómica de tasks/ y hace un único commit. Use when implementing a specific numbered SDD task, writing code for a task, or fixing a task rejected by the verifier."
-model: "DeepSeek V4.1 Flash"
+model: "GPT-5.3-Codex (openai)"
 tools: ['read', 'search', 'edit', 'execute', 'todo']
 reasoning-effort: "medium"
 ---

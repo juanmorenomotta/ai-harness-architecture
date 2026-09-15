@@ -1,12 +1,12 @@
 {
   "//": "GENERADO por scripts/sync-adapters.sh — NO EDITAR A MANO. Fuente: .harness/models.yaml",
-  "availableModels": ["deepseek-flash", "deepseek-v4-pro"],
+  "availableModels": ["DeepSeek V4 Flash (deepseek)", "claude-sonnet-5", "gpt-5.3-codex", "gpt-5.6-terra"],
   "agents": {
-    "sdd-developer": { "model": "deepseek-flash", "reasoning": "medium", "temperature": 0.1 },
-    "sdd-init": { "model": "deepseek-v4-pro", "reasoning": "high", "temperature": 0.2 },
-    "sdd-security-reviewer": { "model": "deepseek-v4-pro", "reasoning": "high", "temperature": 0.0 },
-    "sdd-tech-lead": { "model": "deepseek-v4-pro", "reasoning": "high", "temperature": 0.3 },
-    "sdd-verifier": { "model": "deepseek-v4-pro", "reasoning": "high", "temperature": 0.0 }
+    "sdd-developer": { "model": "gpt-5.3-codex", "reasoning": "medium", "temperature": 0.1 },
+    "sdd-init": { "model": "claude-sonnet-5", "reasoning": "high", "temperature": 0.2 },
+    "sdd-security-reviewer": { "model": "claude-sonnet-5", "reasoning": "high", "temperature": 0.0 },
+    "sdd-tech-lead": { "model": "gpt-5.6-terra", "reasoning": "high", "temperature": 0.3 },
+    "sdd-verifier": { "model": "DeepSeek V4 Flash (deepseek)", "reasoning": "high", "temperature": 0.0 }
   },
   "permissions": {
     "deny": ["Bash(git push --force:*)", "Bash(git reset --hard:*)", "Bash(sudo:*)", "Write(AGENTS.md)", "Write(.harness/**)", "Write(.agents/**)"]

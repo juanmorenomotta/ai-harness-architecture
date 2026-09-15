@@ -1,6 +1,6 @@
 ---
 description: "Convierte un prompt de feature en un alcance medible. Use when starting a new feature, need scope.md, acceptance criteria, or non-goals defined before any design work."
-model: "DeepSeek V4 Pro"
+model: "Claude Sonnet 5 (anthropic)"
 tools: ['read', 'search', 'todo']
 reasoning-effort: "high"
 ---

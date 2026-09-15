@@ -1,6 +1,6 @@
 ---
 description: "Transforma scope.md en diseño técnico y plan de tareas atómicas. Use when converting an approved scope into design.md, architecture decisions, interfaces, or task decomposition."
-model: "DeepSeek V4 Pro"
+model: "GPT-5.6 Terra (openai)"
 tools: ['read', 'search', 'todo']
 reasoning-effort: "high"
 ---

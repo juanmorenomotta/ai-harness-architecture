@@ -5,32 +5,45 @@
 # Cambiar de modelo = editar este archivo + `bash scripts/sync-adapters.sh`.
 #
 # `model` admite:
-#   - un nombre de modelo del catálogo del proveedor (ver .harness/providers.yaml)
-#   - un alias nativo del CLI (ver .harness/routing.yaml -> aliases)
-#   - un modelo local servido por endpoint OpenAI-compatible (provider: "local")
+#   - un nombre del catálogo del RUNTIME que ejecuta al agente (lo normal aquí:
+#     el selector de GitHub Copilot, ver `catalog.copilot`)
+#   - un alias nativo de otro CLI (ver .harness/routing.yaml -> aliases)
+#   - un modelo servido por endpoint OpenAI-compatible (provider: "local")
 #
-# VALIDACIÓN (2026-09-15, contra documentación oficial de cada proveedor):
-#   ✔ deepseek-flash        API DeepSeek — nombre vigente. V4.1-Flash, 1M ctx, tools, vision.
-#   ✔ deepseek-v4-pro       API DeepSeek — V4-Pro-0813, 1M ctx, tools, sin vision.
-#   ✔ claude-sonnet-5       Anthropic  — "best combination of speed and intelligence".
-#   ✔ claude-opus-5         Anthropic  — "complex agentic coding and enterprise work".
-#   ✔ gpt-5.6-terra         OpenAI     — "balances intelligence and cost".
-#   ✔ gpt-6-astra           OpenAI     — flagship, razonamiento y coding complejos.
-#   ✔ gemini-3.8-flash      Google     — "most intelligent Flash model" (stable).
-#   ✘ deepseek-v4-flash     RETIRADO  — se acepta por compatibilidad, lo sirve V4.1-Flash.
-#   ✘ gpt-5-mini            NO EXISTE — la línea se sustituyó por gpt-5.6-luna.
-#   ✘ gpt-5.3-codex         NO EXISTE.
-#   ✘ claude-sonnet-4-20250514  NO EXISTE — fuera del catálogo actual.
+# Si el modelo lo aporta una EXTENSIÓN, `model` lleva el nombre cualificado que
+# acepta el frontmatter ("<name> (<vendor>)") y `model_id` el id limpio, que es
+# el que se valida contra el catálogo.
+#
+# ---------------------------------------------------------------------------
+# LECCIONES APRENDIDAS (2026-09-15) — no repetir estos dos errores:
+#
+# 1. NO validar contra la documentación de una API.
+#    "Corregí" este archivo a modelos que documentan las APIs de OpenAI y
+#    Anthropic. Error de criterio: una API y un runtime agéntico tienen
+#    catálogos DISTINTOS. 'gpt-5.3-codex' no está en los docs de la API de
+#    OpenAI pero SÍ en el selector de Copilot.
+#
+# 2. NO confundir catálogo nativo con catálogo extendido.
+#    'DeepSeek V4 Flash' no aparece en models.json (catálogo nativo) y concluí
+#    que no existía. Sí existe: lo aporta una extensión de terceros que se
+#    registra como `languageModelChatProviders`. Hay que mirar los dos.
+#
+# FUENTE DE VERDAD del catálogo (evidencia, no suposición):
+#   %APPDATA%/Code/User/workspaceStorage/<id>/GitHub.copilot-chat/
+#     debug-logs/<session>/models.json  -> catálogo nativo (model_picker_enabled)
+#     chatSessions/<session>.jsonl      -> registro real: selectedModel, tool calls
+#   ~/.vscode/extensions/<ext>/package.json -> languageModelChatProviders
+# ---------------------------------------------------------------------------
 #
 # `sync-adapters.sh` traduce esto a:
+#   .github/agents/*.agent.md  -> agentes para GitHub Copilot en VS Code
 #   .claude/settings.json      -> availableModels (allowlist)
 #   .gemini/config.yaml        -> tiers / modelo por subagente
 #   .codex/config.toml         -> model + model_reasoning_effort
-#   .github/agents/*.agent.md  -> agentes para GitHub Copilot en VS Code
 #   .env.harness               -> variables para orquestadores propios (CAO, etc.)
 # ---------------------------------------------------------------------------
 
-version: "1.1.0"
+version: "1.2.0"
 
 defaults:
   reasoning: "medium"
@@ -38,83 +51,136 @@ defaults:
   max_output_tokens: 8192
   timeout_seconds: 300
 
-# Proveedor operativo actualmente. Solo DeepSeek tiene credencial configurada,
-# así que todos los roles apuntan ahí. Los `fallback` usan modelos de otros
-# proveedores: cambiar de proveedor es editar una línea cuando exista la clave.
-active_provider: "deepseek"
+# Runtime que ejecuta los agentes. Su catálogo es la fuente de validación.
+active_runtime: "copilot"
 
 roles:
   # --- Init / Scope -------------------------------------------------------
-  # Convertir un prompt vago en alcance medible exige matiz, no velocidad.
+  # Convertir un prompt vago en alcance medible exige criterio y matiz.
   sdd-init:
-    model: "deepseek-v4-pro"
-    provider: "deepseek"
+    model: "claude-sonnet-5"
+    runtime: "copilot"
     reasoning: "high"
     temperature: 0.2
-    rationale: "Convertir ambigüedad en criterios medibles exige razonamiento, no latencia."
-    fallback: ["claude-sonnet-5", "gpt-5.6-terra"]
+    rationale: "Ambigüedad → criterios medibles: criterio, no velocidad."
+    fallback: ["gpt-5.6-terra"]
 
   # --- Design / Tasks -----------------------------------------------------
-  # Diseño y descomposición: contexto largo y razonamiento estructural.
+  # Diseño y descomposición: razonamiento estructural sobre el repo existente.
   sdd-tech-lead:
-    model: "deepseek-v4-pro"
-    provider: "deepseek"
+    model: "gpt-5.6-terra"
+    runtime: "copilot"
     reasoning: "high"
     temperature: 0.3
-    rationale: "Diseño y descomposición sobre arquitectura existente; 1M de contexto."
-    fallback: ["claude-sonnet-5", "gemini-3.8-flash"]
+    rationale: "Arquitectura, interfaces y descomposición: máxima capacidad de razonamiento."
+    fallback: ["claude-sonnet-5"]
 
   # --- Implement ----------------------------------------------------------
-  # Tareas atómicas y bien acotadas: coste y latencia son lo prioritario.
+  # Tareas atómicas y ya especificadas: importa el cumplimiento exacto.
   sdd-developer:
-    model: "deepseek-flash"
-    provider: "deepseek"
+    model: "gpt-5.3-codex"
+    runtime: "copilot"
     reasoning: "medium"
     temperature: 0.1
-    rationale: "Una tarea = un commit, con el criterio ya escrito: no necesita razonamiento alto."
-    fallback: ["deepseek-v4-pro", "gpt-5.6-luna"]
+    rationale: "Tarea acotada con criterio escrito: modelo especializado en código."
+    fallback: ["claude-sonnet-5"]
 
   # --- Verify -------------------------------------------------------------
-  # Verificación independiente: máximo criterio del proveedor activo y temperatura 0.
+  # Verificación independiente: modelo DISTINTO al del Developer, para que el
+  # error correlacionado no pase desapercibido.
+  #
+  # DeepSeek V4 Flash lo aporta una EXTENSIÓN de terceros, no el catálogo
+  # nativo. Verificado en el log de sesión: selectedModel = deepseek-v4-flash
+  # con tool calling en uso (run_in_terminal, replace_string_in_file).
   sdd-verifier:
-    model: "deepseek-v4-pro"
-    provider: "deepseek"
+    model: "DeepSeek V4 Flash (deepseek)"
+    model_id: "deepseek-v4-flash"
+    runtime: "copilot"
+    provided_by: "extension:DenizhanDaklr.copilot-vscode-deepseek"
     reasoning: "high"
     temperature: 0.0
-    rationale: "El veredicto debe ser reproducible; se usa el modelo más capaz disponible."
-    fallback: ["gpt-6-astra", "claude-opus-5"]
+    rationale: "Independiente del Developer (Codex) y con tool calling verificado."
+    fallback: ["gpt-5.6-terra"]
 
   # --- Security review (opcional) -----------------------------------------
-  # Análisis adversario del diff, con el mismo rigor que la verificación.
+  # Análisis adversario del diff.
   sdd-security-reviewer:
-    model: "deepseek-v4-pro"
-    provider: "deepseek"
+    model: "claude-sonnet-5"
+    runtime: "copilot"
     reasoning: "high"
     temperature: 0.0
-    rationale: "Análisis adversario: máximo criterio y temperatura 0."
-    fallback: ["claude-opus-5", "gpt-6-astra"]
+    rationale: "Razonamiento adversario sobre el diff; temperatura 0 para reproducibilidad."
+    fallback: ["gpt-5.6-terra"]
 
 tiers:
   # Nivel 1 del harness: mínimo viable. Un modelo por rol, sin enrutamiento dinámico.
   level: 1
   optimization: "manual"   # manual | cost | latency | quality
 
-# Modelos verificados por proveedor, para cambiar de rol sin consultar la web.
+# ---------------------------------------------------------------------------
+# Catálogo válido POR RUNTIME. Es la fuente contra la que se valida.
+#
+# Hay DOS procedencias de modelo y confundirlas fue el error:
+#   1. provided_by: native            -> lo sirve GitHub
+#   2. provided_by: extension:<id>    -> lo aporta una extensión de terceros
+#      vía languageModelChatProviders. NO aparece en models.json.
+# ---------------------------------------------------------------------------
 catalog:
+  copilot:
+    models:
+      # --- nativos del selector ---
+      - selector_name: "Claude Sonnet 5"
+        id: "claude-sonnet-5"
+        vendor: "Anthropic"
+        provided_by: "native"
+      - selector_name: "GPT-5.6 Terra"
+        id: "gpt-5.6-terra"
+        vendor: "OpenAI"
+        provided_by: "native"
+      - selector_name: "GPT-5.3-Codex"
+        id: "gpt-5.3-codex"
+        vendor: "OpenAI"
+        provided_by: "native"
+        note: "Existe en Copilot aunque no figure en los docs de la API de OpenAI."
+      - selector_name: "GPT-5.4"
+        id: "gpt-5.4"
+        vendor: "OpenAI"
+        provided_by: "native"
+      - selector_name: "Gemini 3.8 Flash"
+        id: "gemini-3.8-flash"
+        vendor: "Google"
+        provided_by: "native"
+      - selector_name: "Claude Haiku 4.5"
+        id: "claude-haiku-4.5"
+        vendor: "Anthropic"
+        provided_by: "native"
+
+      # --- aportados por extensión (no están en models.json) ---
+      - selector_name: "DeepSeek V4 Flash"
+        id: "deepseek-v4-flash"
+        vendor: "deepseek"
+        provided_by: "extension:DenizhanDaklr.copilot-vscode-deepseek"
+        note: >
+          Verificado con el log de sesión: selectedModel.identifier =
+          "deepseek/deepseek-v4-flash" y tool calling en uso. Requiere saldo:
+          un 402 "Insufficient Balance" es facturación, no un fallo del harness.
+
+# Catálogos de otros runtimes (para cuando se cambie de CLI).
+catalog_other_runtimes:
   deepseek:
-    - "deepseek-flash"      # barato y rápido; 1M ctx; tools + vision
-    - "deepseek-v4-pro"     # razonamiento alto; 1M ctx; tools; sin vision
+    note: "Nombres de la API de DeepSeek si se llama directamente, sin Copilot."
+    models:
+      - "deepseek-v4-flash"
+      - "deepseek-v4-pro"
   anthropic:
-    - "claude-sonnet-5"
-    - "claude-opus-5"
-    - "claude-fable-5-1"    # razonamiento exigente y trabajo agéntico largo
-    - "claude-haiku-4-5"    # el más rápido y barato
+    note: "Nombres de la API de Anthropic, no del selector de Copilot."
+    models:
+      - "claude-sonnet-5"
+      - "claude-opus-5"
   openai:
-    - "gpt-6-astra"         # flagship
-    - "gpt-5.6"             # alias de la línea 5.6
-    - "gpt-5.6-terra"
-    - "gpt-5.6-luna"        # optimizado para coste
-  google:
-    - "gemini-3.8-flash"    # el Flash más capaz (stable)
-    - "gemini-3.7-flash"
+    note: "Nombres de la API de OpenAI."
+    models:
+      - "gpt-5.6"
+      - "gpt-5.6-terra"
+      - "gpt-5.6-luna"
 

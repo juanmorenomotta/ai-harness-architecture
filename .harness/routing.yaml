@@ -46,22 +46,27 @@ retry:
 # Catálogo verificado 2026-09-15.
 aliases:
   copilot:
-    # GitHub Copilot en VS Code (ruta de uso principal de este harness).
-    # El agente .agent.md declara un modelo de la lista disponible en el selector;
-    # si el modelo no está disponible, cae al siguiente de `model`.
+    # GitHub Copilot en VS Code — runtime real de este harness.
+    # Traduce el `id` de models.yaml al nombre EXACTO que acepta el frontmatter.
+    #
+    # Hay dos procedencias y ambas usan el formato "<name> (<vendor>)":
+    #   - nativo    -> vendor = Anthropic, OpenAI, Google, xAI, Moonshot, Microsoft
+    #   - extensión -> vendor declarado por la extensión, p. ej. "deepseek"
+    #     (DenizhanDaklr.copilot-vscode-deepseek registra vendor "deepseek")
     model_map:
-      deepseek-flash: "DeepSeek V4.1 Flash"
-      deepseek-v4-pro: "DeepSeek V4 Pro"
-      claude-sonnet-5: "Claude Sonnet 5"
-      claude-opus-5: "Claude Opus 5"
-      gpt-6-astra: "GPT-6 Astra"
-      gpt-5.6-terra: "GPT-5.6 Terra"
-      gemini-3.8-flash: "Gemini 3.8 Flash"
+      claude-sonnet-5: "Claude Sonnet 5 (anthropic)"
+      gpt-5.6-terra: "GPT-5.6 Terra (openai)"
+      gpt-5.3-codex: "GPT-5.3-Codex (openai)"
+      gpt-5.4: "GPT-5.4 (openai)"
+      gpt-5.4-mini: "GPT-5.4 mini (openai)"
+      gemini-3.8-flash: "Gemini 3.8 Flash (google)"
+      claude-haiku-4.5: "Claude Haiku 4.5 (anthropic)"
+      mai-code-1.1-flash: "MAI-Code-1.1-Flash (microsoft)"
+      deepseek-v4-flash: "DeepSeek V4 Flash (deepseek)"
 
   claude-code:
     "claude-sonnet-5": "claude-sonnet-5"
     "claude-opus-5": "claude-opus-5"
-    "claude-fable-5-1": "claude-fable-5-1"
     "claude-haiku-4-5": "claude-haiku-4-5"
     tier_map:
       high: "claude-opus-5"
@@ -75,7 +80,7 @@ aliases:
       low: "flash"
 
   codex:
-    "gpt-6-astra": "gpt-6-astra"
+    "gpt-5.3-codex": "gpt-5.3-codex"
     "gpt-5.6-terra": "gpt-5.6-terra"
     reasoning_map:
       low: "low"
