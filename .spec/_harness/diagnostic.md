@@ -8,8 +8,6 @@ Informe generado automáticamente por `scripts/diagnose_harness.py`. Nueve dimen
 
 Estos checks existen y reportan PASS, pero **no pueden verificar nada todavía**. La puntuación de la dimensión 9 ya está penalizada por ello.
 
-- `secrets`: sin repo git, el escaneo del árbol no se ejecuta
-- `guardrails`: sin repo git, no se detectan cambios en archivos protegidos
 - `lint`/`format`/`typecheck`/`tests`: sin manifiesto de proyecto, todo da SKIP
 - `secrets`: gitleaks no instalado (solo se usa el patrón grep de respaldo)
 
@@ -17,15 +15,15 @@ Estos checks existen y reportan PASS, pero **no pueden verificar nada todavía**
 
 | # | Dimensión | Nivel | Puntuación |
 | :-- | :--- | :--- | :--- |
-| 1 | Ingeniería de contexto | completo | `████` 4/4 |
-| 2 | Adopción de herramientas | completo | `████` 4/4 |
-| 3 | Integración en el workflow | completo | `████` 4/4 |
-| 4 | Revisión de código con IA | completo | `████` 4/4 |
-| 5 | Controles de governance | completo | `████` 4/4 |
-| 6 | Cobertura de skills | completo | `████` 4/4 |
-| 7 | Autonomía agéntica | completo | `████` 4/4 |
-| 8 | Generación de tests | completo | `████` 4/4 |
-| 9 | Gates de CI/CD con IA | sólido | `███░` 3/4 |
+| 1 | Ingeniería de contexto | completo | `####` 4/4 |
+| 2 | Adopción de herramientas | completo | `####` 4/4 |
+| 3 | Integración en el workflow | completo | `####` 4/4 |
+| 4 | Revisión de código con IA | completo | `####` 4/4 |
+| 5 | Controles de governance | completo | `####` 4/4 |
+| 6 | Cobertura de skills | completo | `####` 4/4 |
+| 7 | Autonomía agéntica | completo | `####` 4/4 |
+| 8 | Generación de tests | completo | `####` 4/4 |
+| 9 | Gates de CI/CD con IA | sólido | `###.` 3/4 |
 
 ## Lectura frente a los niveles objetivo
 
@@ -98,12 +96,10 @@ Estos checks existen y reportan PASS, pero **no pueden verificar nada todavía**
 - el gate incluye verificación de integridad y secretos
 
 **Carencias**
-- 4 check(s) INERTE(S): el gate pasa sin verificar nada real (un PASS así no debe contarse como 4/4)
+- 2 check(s) INERTE(S): el gate pasa sin verificar nada real (un PASS así no debe contarse como 4/4)
 
 **Atención**
 - el gate falla ahora mismo; revisar antes de delegar trabajo
-- `secrets`: sin repo git, el escaneo del árbol no se ejecuta
-- `guardrails`: sin repo git, no se detectan cambios en archivos protegidos
 - `lint`/`format`/`typecheck`/`tests`: sin manifiesto de proyecto, todo da SKIP
 - `secrets`: gitleaks no instalado (solo se usa el patrón grep de respaldo)
 
