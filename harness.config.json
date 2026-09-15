@@ -1,0 +1,86 @@
+{
+  "$schema": "./.harness/harness.config.schema.json",
+  "version": "1.0.0",
+  "repository": {
+    "name": "deepseek-harness",
+    "defaultBranch": "main",
+    "protectedBranches": ["main", "develop", "release/*"],
+    "language": "es",
+    "codeLanguage": "en"
+  },
+  "verification": {
+    "gate": "./init.sh",
+    "timeoutSeconds": 900,
+    "failFast": true,
+    "steps": {
+      "lint": {
+        "enabled": true,
+        "command": null,
+        "comment": "Autodetectado por init.sh (ruff/eslint/golangci-lint). null = detectar."
+      },
+      "format": {
+        "enabled": true,
+        "command": null,
+        "comment": "Solo comprobación (--check), nunca reescribir archivos en el gate."
+      },
+      "typecheck": {
+        "enabled": true,
+        "command": null,
+        "comment": "mypy | tsc --noEmit | cargo check | go vet"
+      },
+      "tests": {
+        "enabled": true,
+        "command": null,
+        "comment": "pytest | npm test | cargo test | go test ./..."
+      },
+      "secrets": {
+        "enabled": true,
+        "command": null,
+        "comment": "Escaneo de secretos (gitleaks/detect-secrets). Bloquea si encuentra algo."
+      }
+    }
+  },
+  "paths": {
+    "spec": ".spec",
+    "agents": ".agents/agents",
+    "skills": ".agents/skills",
+    "policies": ".agents/policies",
+    "harness": ".harness",
+    "scripts": "scripts",
+    "tests": "tests"
+  },
+  "workflow": {
+    "taskIdPattern": "^[0-9]{3}$",
+    "commitMessagePattern": "^(sdd: task [0-9]{3} - .+|spec\\([a-z0-9-]+\\): .+|verify\\([a-z0-9-]+\\): .+|fix: .+|chore: .+)$",
+    "oneTaskPerCommit": true,
+    "allowAutoMerge": false,
+    "requireHumanApprovalGates": ["G1", "G2", "G3"],
+    "maxTasksPerCommit": 1
+  },
+  "guardrails": {
+    "protectedFiles": [
+      "AGENTS.md",
+      "harness.config.json",
+      "init.sh",
+      ".harness/**",
+      ".agents/**",
+      ".github/workflows/**"
+    ],
+    "deniedCommandPatterns": [
+      "git push --force*",
+      "git push -f*",
+      "git reset --hard*",
+      "git clean -fdx*",
+      "sudo *",
+      "rm -rf /*",
+      "chmod 777*",
+      "curl * | sh",
+      "wget * | sh"
+    ]
+  },
+  "diagnostics": {
+    "dimensions": 9,
+    "report": ".spec/_harness/diagnostic.md",
+    "script": "scripts/diagnose_harness.py"
+  }
+}

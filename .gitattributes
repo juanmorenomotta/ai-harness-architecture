@@ -1,0 +1,43 @@
+# Normalización de finales de línea.
+#
+# Motivo concreto: los scripts del harness parsean YAML con awk y anclas `$`.
+# Un `\r` al final de línea rompe esas anclas en silencio (el parser devuelve
+# cero roles y el harness "falla" sin decir por qué). Forzar LF en los scripts
+# elimina la clase entera de problema.
+#
+# El autocrlf de Windows vuelve a introducir CRLF al hacer checkout, así que
+# esto no es cosmético: es lo que mantiene los scripts ejecutables.
+
+# Por defecto, normalizar a LF en el repo.
+* text=auto eol=lf
+
+# Scripts que se ejecutan con bash: LF obligatorio.
+*.sh        text eol=lf
+*.bash      text eol=lf
+
+# Python
+*.py        text eol=lf
+
+# Configuración del harness (la parsean los scripts)
+*.yaml      text eol=lf
+*.yml       text eol=lf
+*.json      text eol=lf
+*.toml      text eol=lf
+*.agent.md  text eol=lf
+*.md        text eol=lf
+
+# Ejecutables: nunca normalizar
+*.png       binary
+*.jpg       binary
+*.gif       binary
+*.ico       binary
+*.pdf       binary
+*.woff      binary
+*.woff2     binary
+
+# Diff legible para archivos generados
+.claude/settings.json   linguist-generated=true
+.gemini/config.yaml     linguist-generated=true
+.codex/config.toml      linguist-generated=true
+.env.harness            linguist-generated=true
+.github/agents/*.agent.md linguist-generated=true

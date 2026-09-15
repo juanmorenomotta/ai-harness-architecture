@@ -1,0 +1,20 @@
+# GENERADO por scripts/sync-adapters.sh — NO EDITAR A MANO.
+# Fuente: .harness/models.yaml
+
+[model]
+# Codex ejecuta un modelo por sesión; la asignación por rol se resuelve
+# pasando --model en cada invocación desde el orquestador.
+default = "deepseek-v4-pro"
+reasoning_effort = "high"
+
+[agents]
+sdd-developer = { model = "deepseek-flash", reasoning = "medium" }
+sdd-init = { model = "deepseek-v4-pro", reasoning = "high" }
+sdd-security-reviewer = { model = "deepseek-v4-pro", reasoning = "high" }
+sdd-tech-lead = { model = "deepseek-v4-pro", reasoning = "high" }
+sdd-verifier = { model = "deepseek-v4-pro", reasoning = "high" }
+
+[safety]
+# R3/R4 del AGENTS.md raíz
+auto_merge = false
+allow_protected_file_edits = false

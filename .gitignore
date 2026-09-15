@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Secretos — R9 de AGENTS.md: NUNCA versionar credenciales
+.env
+.env.*
+!.env.harness
+*.pem
+id_rsa*
+
+# Artefactos generados por scripts/sync-adapters.sh (se regeneran desde models.yaml)
+# Se versionan a propósito para que los CLIs los lean sin ejecutar nada,
+# pero si prefieres generarlos en CI, descomenta las siguientes líneas:
+# .claude/settings.json
+# .gemini/config.yaml
+# .codex/config.toml
+
+# Salidas locales
+.spec/**/verify.md.bak
+*.log

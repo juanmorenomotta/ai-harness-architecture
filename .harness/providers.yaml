@@ -1,0 +1,109 @@
+# .harness/providers.yaml
+# ---------------------------------------------------------------------------
+# Definición de proveedores. Todos se exponen como endpoints OpenAI-compatible,
+# de modo que cualquier CLI/orquestador pueda consumirlos con un único adaptador.
+#
+# ---------------------------------------------------------------------------
+# REGLA R9 (AGENTS.md): aquí solo se declara el NOMBRE de la variable de entorno
+# que contiene la credencial. NUNCA el valor de la clave.
+#
+# URLs y catálogos verificados contra la documentación oficial el 2026-09-15.
+# ---------------------------------------------------------------------------
+
+version: "1.1.0"
+
+providers:
+  deepseek:
+    type: "openai-compatible"
+    base_url: "https://api.deepseek.com"
+    anthropic_base_url: "https://api.deepseek.com/anthropic"
+    api_key_env: "DEEPSEEK_API_KEY"
+    models:
+      - "deepseek-flash"
+      - "deepseek-v4-pro"
+    supports:
+      - tools
+      - streaming
+      - json_output
+      - chat_prefix_completion    # beta
+      - fim_completion            # beta, solo modo no-thinking
+    limits:
+      context_window: 1000000
+      max_output_tokens: 384000
+      concurrency: 2500
+    notes:
+      - "ERROR 402 'Insufficient Balance' = saldo agotado. Es facturación, NO un fallo del prompt."
+      - "Verificar saldo en https://platform.deepseek.com/usage antes de culpar al harness."
+      - "Nombre RETIRADO: 'deepseek-v4-flash' aún se acepta pero lo sirve V4.1-Flash. Usar 'deepseek-flash'."
+      - "Precio variable: off-peak cuesta la mitad. Pico = 01:00-04:00 y 06:00-10:00 UTC, L-V."
+      - "'deepseek-flash' soporta vision; 'deepseek-v4-pro' no."
+
+  anthropic:
+    type: "openai-compatible"
+    base_url: "https://api.anthropic.com/v1"
+    api_key_env: "ANTHROPIC_API_KEY"
+    models:
+      - "claude-sonnet-5"
+      - "claude-opus-5"
+      - "claude-fable-5-1"
+      - "claude-haiku-4-5"
+    supports:
+      - tools
+      - streaming
+      - vision
+    notes:
+      - "Catálogo verificado 2026-09-15. 'claude-sonnet-4-*' y 'claude-opus-4-*' YA NO EXISTEN."
+      - "IDs dateless desde la generación 4.6 son snapshots fijos; no requieren fecha."
+
+  openai:
+    type: "openai-compatible"
+    base_url: "https://api.openai.com/v1"
+    api_key_env: "OPENAI_API_KEY"
+    models:
+      - "gpt-6-astra"
+      - "gpt-5.6"
+      - "gpt-5.6-terra"
+      - "gpt-5.6-luna"
+    supports:
+      - tools
+      - streaming
+      - reasoning_effort
+    notes:
+      - "Catálogo verificado 2026-09-15: 'gpt-5-mini', 'gpt-5.3-codex' y 'gpt-5.4' NO EXISTEN."
+      - "Niveles de reasoning_effort: none, low, medium, high, xhigh, max."
+
+  google:
+    type: "openai-compatible"
+    base_url: "https://generativelanguage.googleapis.com/v1beta/openai/"
+    api_key_env: "GOOGLE_API_KEY"
+    models:
+      - "gemini-3.8-flash"
+      - "gemini-3.7-flash"
+    supports:
+      - tools
+      - streaming
+      - vision
+    notes:
+      - "'gemini-3.8-flash' es el Flash más capaz y estable (verificado 2026-09-15)."
+
+  local:
+    type: "openai-compatible"
+    base_url: "http://localhost:8000/v1"
+    api_key_env: "VLLM_API_KEY"   # opcional según el servidor
+    models: []                     # se descubre en /v1/models
+    supports:
+      - tools
+      - streaming
+    notes:
+      - "vLLM / Ollama / LM Studio expuestos como OpenAI-compatible."
+      - "Usar SOLO para tareas atómicas; el Verifier no debe usar modelos locales en Nivel 1."
+      - "Requiere GPU: ver restricciones de hardware en routing.yaml."
+
+# Orden de preferencia cuando un rol tiene varios proveedores disponibles.
+preference_order:
+  - deepseek
+  - anthropic
+  - openai
+  - google
+  - local
+

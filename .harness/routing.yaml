@@ -1,0 +1,99 @@
+# .harness/routing.yaml
+# ---------------------------------------------------------------------------
+# Reglas de enrutamiento: qué hacer cuando el modelo preferido no está disponible.
+# En Nivel 1 son deliberadamente simples (estáticas). El enrutamiento dinámico
+# por coste/latencia es Nivel 2-3 y NO se activa todavía.
+# ---------------------------------------------------------------------------
+
+version: "1.0.0"
+
+policy:
+  mode: "static"          # static | cost-aware | latency-aware  (Nivel 1 = static)
+  on_unavailable: "fallback"   # fallback | block | degrade
+  on_quota_exceeded: "block"   # block | fallback
+  on_balance_exhausted: "block"
+  block_reason_template: >
+    BLOQUEO: proveedor '{provider}' sin saldo/cuota para el rol '{role}' ({model}).
+    Evidencia: {error}. Necesito: recargar crédito o cambiar el fallback en
+    .harness/models.yaml, luego re-ejecutar scripts/sync-adapters.sh.
+
+# Errores del proveedor que NO deben reintentarse (fallar rápido y escalar).
+non_retryable_errors:
+  - code: 401
+    meaning: "Credencial inválida o revocada. Revisar la variable de entorno del proveedor."
+  - code: 402
+    meaning: "Saldo/cuota agotados. Es un problema de facturación, no del código."
+  - code: 403
+    meaning: "Permiso denegado para ese modelo o endpoint."
+  - code: 404
+    meaning: "Modelo inexistente o mal escrito. Revisar models.yaml."
+
+retryable_errors:
+  - code: 408
+  - code: 429
+  - code: 500
+  - code: 502
+  - code: 503
+
+retry:
+  max_attempts: 3
+  backoff: "exponential"
+  base_delay_seconds: 2
+  jitter: true
+
+# Alias que cada CLI espera en su propio vocabulario.
+# sync-adapters.sh los usa para traducir models.yaml sin tocar los prompts.
+# Catálogo verificado 2026-09-15.
+aliases:
+  copilot:
+    # GitHub Copilot en VS Code (ruta de uso principal de este harness).
+    # El agente .agent.md declara un modelo de la lista disponible en el selector;
+    # si el modelo no está disponible, cae al siguiente de `model`.
+    model_map:
+      deepseek-flash: "DeepSeek V4.1 Flash"
+      deepseek-v4-pro: "DeepSeek V4 Pro"
+      claude-sonnet-5: "Claude Sonnet 5"
+      claude-opus-5: "Claude Opus 5"
+      gpt-6-astra: "GPT-6 Astra"
+      gpt-5.6-terra: "GPT-5.6 Terra"
+      gemini-3.8-flash: "Gemini 3.8 Flash"
+
+  claude-code:
+    "claude-sonnet-5": "claude-sonnet-5"
+    "claude-opus-5": "claude-opus-5"
+    "claude-fable-5-1": "claude-fable-5-1"
+    "claude-haiku-4-5": "claude-haiku-4-5"
+    tier_map:
+      high: "claude-opus-5"
+      medium: "claude-sonnet-5"
+      low: "claude-haiku-4-5"
+
+  gemini:
+    tier_map:
+      high: "pro"
+      medium: "flash"
+      low: "flash"
+
+  codex:
+    "gpt-6-astra": "gpt-6-astra"
+    "gpt-5.6-terra": "gpt-5.6-terra"
+    reasoning_map:
+      low: "low"
+      medium: "medium"
+      high: "high"
+
+  generic-openai-compatible:
+    passthrough: true   # el nombre del modelo se envía tal cual
+
+# Restricciones de coste (solo informativo en Nivel 1; se aplican en Nivel 2).
+budget:
+  enabled: false
+  max_usd_per_feature: null
+  alert_on_percent: 80
+
+# Restricciones de hardware para modelos locales.
+hardware:
+  local_model_requires_gpu: true
+  min_vram_gb: 24
+  notes:
+    - "Si no hay GPU suficiente, enrutar sdd-developer al fallback en la nube."

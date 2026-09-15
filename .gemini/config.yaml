@@ -1,0 +1,27 @@
+# GENERADO por scripts/sync-adapters.sh — NO EDITAR A MANO.
+# Fuente: .harness/models.yaml
+version: "1.0.0"
+
+# Antigravity razona por tiers (flash/pro), no por nombre exacto de modelo.
+# El tier se deriva del campo 'reasoning' de models.yaml.
+agents:
+  sdd-developer:
+    tier: "flash"
+    model_hint: "deepseek-flash"   # informativo; el motor usa el tier
+    provider: "deepseek"
+  sdd-init:
+    tier: "pro"
+    model_hint: "deepseek-v4-pro"   # informativo; el motor usa el tier
+    provider: "deepseek"
+  sdd-security-reviewer:
+    tier: "pro"
+    model_hint: "deepseek-v4-pro"   # informativo; el motor usa el tier
+    provider: "deepseek"
+  sdd-tech-lead:
+    tier: "pro"
+    model_hint: "deepseek-v4-pro"   # informativo; el motor usa el tier
+    provider: "deepseek"
+  sdd-verifier:
+    tier: "pro"
+    model_hint: "deepseek-v4-pro"   # informativo; el motor usa el tier
+    provider: "deepseek"
