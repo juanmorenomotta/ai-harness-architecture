@@ -14,29 +14,29 @@ version: "1.1.0"
 
 providers:
   deepseek:
+    # NOTA DE ALCANCE: en este harness DeepSeek NO se consume por la API directa,
+    # sino a través de la extensión de GitHub Copilot
+    # (DenizhanDaklr.copilot-vscode-deepseek), que se registra como
+    # languageModelChatProviders y expone "DeepSeek V4 Flash".
+    # Esta sección documenta la API por si un orquestador externo la llama
+    # directamente; no es la ruta que usan los agentes de .github/agents/.
     type: "openai-compatible"
     base_url: "https://api.deepseek.com"
     anthropic_base_url: "https://api.deepseek.com/anthropic"
-    api_key_env: "DEEPSEEK_API_KEY"
+    api_key_env: "DEEPSEEK_API_KEY"   # en VS Code la clave vive en la extensión
     models:
-      - "deepseek-flash"
+      - "deepseek-v4-flash"
       - "deepseek-v4-pro"
     supports:
       - tools
       - streaming
-      - json_output
-      - chat_prefix_completion    # beta
-      - fim_completion            # beta, solo modo no-thinking
     limits:
       context_window: 1000000
-      max_output_tokens: 384000
-      concurrency: 2500
     notes:
-      - "ERROR 402 'Insufficient Balance' = saldo agotado. Es facturación, NO un fallo del prompt."
-      - "Verificar saldo en https://platform.deepseek.com/usage antes de culpar al harness."
-      - "Nombre RETIRADO: 'deepseek-v4-flash' aún se acepta pero lo sirve V4.1-Flash. Usar 'deepseek-flash'."
-      - "Precio variable: off-peak cuesta la mitad. Pico = 01:00-04:00 y 06:00-10:00 UTC, L-V."
-      - "'deepseek-flash' soporta vision; 'deepseek-v4-pro' no."
+      - "ESTADO: operativo y con saldo. El 402 'Insufficient Balance' ya NO ocurre."
+      - "Tool calling verificado: el agente ejecuta herramientas con este modelo."
+      - "Si en el futuro reaparece un 402, es facturación, NO un fallo del prompt."
+      - "Verificar saldo en https://platform.deepseek.com/usage."
 
   anthropic:
     type: "openai-compatible"
@@ -45,22 +45,19 @@ providers:
     models:
       - "claude-sonnet-5"
       - "claude-opus-5"
-      - "claude-fable-5-1"
-      - "claude-haiku-4-5"
     supports:
       - tools
       - streaming
       - vision
     notes:
-      - "Catálogo verificado 2026-09-15. 'claude-sonnet-4-*' y 'claude-opus-4-*' YA NO EXISTEN."
-      - "IDs dateless desde la generación 4.6 son snapshots fijos; no requieren fecha."
+      - "Nombres de la API. En Copilot el selector los llama '<Modelo> (<vendor>)'."
+      - "En Copilot: Claude Sonnet 5, Claude Haiku 4.5."
 
   openai:
     type: "openai-compatible"
     base_url: "https://api.openai.com/v1"
     api_key_env: "OPENAI_API_KEY"
     models:
-      - "gpt-6-astra"
       - "gpt-5.6"
       - "gpt-5.6-terra"
       - "gpt-5.6-luna"
@@ -69,8 +66,8 @@ providers:
       - streaming
       - reasoning_effort
     notes:
-      - "Catálogo verificado 2026-09-15: 'gpt-5-mini', 'gpt-5.3-codex' y 'gpt-5.4' NO EXISTEN."
-      - "Niveles de reasoning_effort: none, low, medium, high, xhigh, max."
+      - "En Copilot: GPT-5.6 Terra, GPT-5.3-Codex, GPT-5.4, GPT-5.4 mini."
+      - "'gpt-5.3-codex' existe en Copilot pero NO en la API de OpenAI: son catálogos distintos."
 
   google:
     type: "openai-compatible"
@@ -78,13 +75,12 @@ providers:
     api_key_env: "GOOGLE_API_KEY"
     models:
       - "gemini-3.8-flash"
-      - "gemini-3.7-flash"
     supports:
       - tools
       - streaming
       - vision
     notes:
-      - "'gemini-3.8-flash' es el Flash más capaz y estable (verificado 2026-09-15)."
+      - "En Copilot: Gemini 3.5/3.6/3.7/3.8 Flash."
 
   local:
     type: "openai-compatible"

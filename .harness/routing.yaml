@@ -18,15 +18,19 @@ policy:
     .harness/models.yaml, luego re-ejecutar scripts/sync-adapters.sh.
 
 # Errores del proveedor que NO deben reintentarse (fallar rápido y escalar).
+# Estado actual (2026-09-15): el proveedor activo (DeepSeek Vía extensión de Copilot)
+# está operativo y con saldo; el tool calling funciona.
 non_retryable_errors:
   - code: 401
-    meaning: "Credencial inválida o revocada. Revisar la variable de entorno del proveedor."
+    meaning: "Credencial inválida o revocada. Revisar la configuración del proveedor."
   - code: 402
     meaning: "Saldo/cuota agotados. Es un problema de facturación, no del código."
   - code: 403
     meaning: "Permiso denegado para ese modelo o endpoint."
   - code: 404
-    meaning: "Modelo inexistente o mal escrito. Revisar models.yaml."
+    meaning: >
+      Modelo inexistente. Validar contra el catálogo del RUNTIME
+      (models.yaml -> catalog), considerando modelos nativos Y de extensión.
 
 retryable_errors:
   - code: 408

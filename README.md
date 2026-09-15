@@ -112,40 +112,58 @@ Los gates G1/G2/G3 exigen aprobación humana; ningún agente aprueba su propio g
 
 Edita **una línea** en `.harness/models.yaml` y resincroniza:
 
-```bash
+```yaml
 # .harness/models.yaml
 roles:
   sdd-developer:
     model: "claude-sonnet-5"   # ← el único cambio
-    provider: "anthropic"
+    runtime: "copilot"
+```
 
+```bash
 bash scripts/sync-adapters.sh && python scripts/validate_harness.py
 ```
 
 Los prompts, los artefactos SDD y los adaptadores no se tocan.
 
-### Modelos verificados (2026-09-15)
+### Catálogo de modelos: DOS procedencias
 
-Contrastados con la documentación oficial de cada proveedor. **Varios nombres habituales
-ya no existen**, así que conviene no copiarlos de memoria:
+El nombre del modelo se valida contra el **catálogo del runtime**, no contra la
+documentación de una API. En GitHub Copilot hay dos vías distintas, y confundirlas
+es un error real que se cometió al construir este harness:
 
-| Proveedor | Válidos | ⚠ Ya no existen |
+| Procedencia | Cómo llega | Dónde se ve |
 | :--- | :--- | :--- |
-| **DeepSeek** | `deepseek-flash`, `deepseek-v4-pro` | ~~`deepseek-v4-flash`~~ (retirado; lo sirve V4.1-Flash) |
-| **Anthropic** | `claude-sonnet-5`, `claude-opus-5`, `claude-fable-5-1`, `claude-haiku-4-5` | ~~`claude-sonnet-4-20250514`~~, ~~`claude-opus-4-*`~~ |
-| **OpenAI** | `gpt-6-astra`, `gpt-5.6`, `gpt-5.6-terra`, `gpt-5.6-luna` | ~~`gpt-5-mini`~~, ~~`gpt-5.3-codex`~~, ~~`gpt-5.4`~~ |
-| **Google** | `gemini-3.8-flash`, `gemini-3.7-flash` | ~~`gemini-3-pro-preview`~~ (apagado) |
+| **Nativo** | Lo sirve GitHub | `models.json` del `workspaceStorage` (`model_picker_enabled`) |
+| **Extensión** | `languageModelChatProviders` de una extensión | `package.json` de la extensión |
 
-El catálogo completo está en `.harness/models.yaml` → `catalog`.
+#### Nativos confirmados en este entorno
+
+`claude-sonnet-5`, `gpt-5.6-terra`, `gpt-5.3-codex`, `gpt-5.4`, `gpt-5.4-mini`,
+`gemini-3.8-flash`, `claude-haiku-4.5`, `mai-code-1.1-flash`.
+
+> Nota: `gpt-5.3-codex` **existe en Copilot** aunque no figure en la documentación de
+> la API de OpenAI. Son catálogos distintos.
+
+#### Aportados por extensión
+
+| Modelo | Extensión | Cómo referenciarlo |
+| :--- | :--- | :--- |
+| **DeepSeek V4 Flash** | `DenizhanDaklr.copilot-vscode-deepseek` | `model: "DeepSeek V4 Flash (deepseek)"` + `model_id` |
+
+**DeepSeek V4 Flash está operativo y con saldo**, usando tool calling (verificado por
+el propio uso: `run_in_terminal`, `replace_string_in_file`, etc.).
+
+El catálogo completo y su procedencia están en `.harness/models.yaml` → `catalog.copilot`.
 
 ### Errores del proveedor
 
 | Código | Significado | Acción |
 | :--- | :--- | :--- |
-| **401** | Credencial inválida | Revisar la variable de entorno del proveedor |
+| **401** | Credencial inválida | Revisar la configuración del proveedor en la extensión |
 | **402** | **Saldo/cuota agotados** | Recargar crédito o usar fallback. Es facturación, **no** un bug del prompt |
-| **403** | Modelo no permitido | Revisar allowlist o cambiar de proveedor |
-| **404** | Modelo inexistente | Typo en `models.yaml`. Consulta la tabla de arriba |
+| **403** | Modelo no permitido | Revisar allowlist o cambiar de modelo |
+| **404** | Modelo inexistente | Nombre mal escrito. Consulta el catálogo en `models.yaml` |
 | **429** / **5xx** | Rate limit / fallo del proveedor | Reintento con backoff (ya configurado) |
 
 Detalle completo en la skill `model-switching`.
