@@ -1,9 +1,13 @@
 # Propuesta — Harness instanciable
 
-> **Estado**: propuesta en curso · **Fecha**: 2026-09-25 · **Decisor**: humano responsable del harness
+> **Estado**: propuesta en curso · **Fecha**: 2026-09-25 · **Revisión**: 2026-09-26
+> **Decisor**: Juan Moreno (responsable del harness) · **Co-firma A4**: revisión Tech Lead humano
 > **Naturaleza**: documento de referencia. Registra las decisiones tomadas y las abiertas sobre cómo
 > convertir este repositorio en un **framework de desarrollo reutilizable**. Forma parte de la
 > historia de construcción del harness.
+>
+> **Estructura**: §1–§10 contexto y decisiones · §11 decisiones abiertas · §12–§13 anexos de
+detalle (A3, A4) · §14 documentos relacionados.
 
 ---
 
@@ -13,7 +17,7 @@ Convertir este repositorio en un **framework de SDLC agéntico** reutilizable en
 desarrollo (backend, frontend, full stack, móvil) **sin depender de la tecnología** ni del modelo
 de lenguaje.
 
-El objetivo declarado por el humano responsable:
+El objetivo declarado por el responsable del harness:
 
 > Guardar la arquitectura del harness en un repositorio versionado; al iniciar un proyecto,
 > instanciarla y crear los repositorios de cada componente a partir de **templates maduros**,
@@ -165,10 +169,57 @@ harness-base                    ← el núcleo: roles, skills, políticas, gates
 ```
 
 Los perfiles de dominio **heredan** del base y solo declaran su **delta**. Un cambio en el base se
-propaga; un cambio en un perfil es visible y acotado. Regla propuesta: *un perfil de dominio no
-puede contradecir al base, solo añadir o restringir*.
+propaga; un cambio en un perfil es visible y acotado.
 
-**Pendiente de decidir**: el mecanismo de herencia (referencia a versión del base + parche de
+**Dos reglas duras del mecanismo de perfiles:**
+
+1. **Un perfil solo añade o restringe. Nunca contradice al base.** Si un perfil necesita contradecir
+   al base, esa es la señal de que la diferencia debe promoverse al base como opción, o de que la
+   herencia es la herramienta equivocada para ese dominio.
+2. **Los perfiles se EXTRAEN, no se diseñan.** Un perfil nace cuando el segundo proyecto de otro tipo
+   revele el delta real. Antes de eso, un perfil es una hipótesis disfrazada de arquitectura.
+
+#### Dónde vive realmente la diferencia entre dominios
+
+Es un error frecuente suponer que backend, frontend y mobile necesitan harness distintos. Al
+clasificar las diferencias por nivel, casi todas caen en el **nivel 3 (componente)**, no en el nivel 1:
+
+| Diferencia real entre backend / frontend / mobile | Nivel donde vive |
+| :--- | :--- |
+| Comandos del gate (`mvn verify` · `npm test` · `flutter test`) | **Nivel 3** — `template.yaml` |
+| Rutas escribibles (`src/main/java` · `src/components` · `lib/`) | **Nivel 3** — `extensions` del template |
+| Conocimiento idiomático (Spring · React · Flutter) | **Nivel 3** — `agent_profile.md` |
+| Template a clonar | **Nivel 3** — `stack.md` |
+| **Rol, fases SDD, gates G1–G3, R1–R10, arranque en frío** | **Igual en los tres** |
+
+**Los roles no cambian.** `sdd-init` convierte una petición vaga en criterios verificables igual si
+el destino es Java o Flutter: su prompt no menciona tecnología, y eso está verificado por comando.
+La pregunta correcta no es *«¿necesito otro harness para frontend?»* sino *«¿qué necesita frontend
+que no tenga ya?»*. La respuesta honesta hoy es **skills adicionales** (accesibilidad, regresión
+visual) y **checks adicionales del gate** (presupuesto de bundle): eso es **aditivo**, no estructural.
+
+**Mobile es el caso que rompe la simetría**, y conviene tenerlo presente:
+
+- Firma de artefactos y gestión de certificados.
+- Revisión de tiendas (App Store / Play) como gate externo.
+- Matriz de dispositivos y versiones de SO soportadas.
+- Verificación que requiere emulador o simulador, no solo unit tests.
+
+Nada de eso cambia los roles ni las fases: son **checks del gate y una skill extra**. Es decir,
+incluso el dominio más distinto se resuelve con **overlay**, no con un harness nuevo.
+
+#### El riesgo de secuencia (argumento decisivo)
+
+Hoy el proyecto tiene **cero aplicaciones**. El harness base nunca ha pasado de la fase init, el gate
+está inerte y hay **cinco versiones divergentes sin check de coherencia** (§2).
+
+Crear tres harness de dominio ahora **multiplica por tres la coordinación de algo que aún no funciona
+una vez**, y lo hace *especulando* sobre diferencias no medidas. El principio de ingeniería aplicable:
+**no se extrae la abstracción hasta tener la segunda o tercera instancia real**. El propio repositorio
+lo demuestra: los cinco artefactos con versión divergieron precisamente por crearse por separado sin
+un check que los coordinara.
+
+**Pendiente de decidir**: el mecanismo concreto de herencia (referencia a versión del base + parche de
 delta, o copia generada con sello de versión).
 
 ### D3 — Ciclo completo para aplicaciones, modo ligero para infraestructura
@@ -255,9 +306,14 @@ Verificado el 2026-09-25, no inferido:
 | Remoto git | **Vacío** (R3 no es ejecutable) |
 | `scripts/**` en `writable_paths` de algún rol | **No** (bloquea `validator-runner` y el materializador) |
 | Checks de `init.sh` (`lint`, `format`, `typecheck`, `tests`) | **`SKIP`** → el gate dice PASS sin comprobar nada |
+| Rol con permiso de escritura en `scripts/**` | **Ninguno** (ver anexo B, §13) |
 
 **El flujo SDD nunca ha pasado de la fase init.** La arquitectura está definida y verificada en su
 capa de definición, pero **nunca se ha ejercitado** con código real.
+
+Esto tiene una consecuencia sobre el orden de trabajo: los huecos de esta tabla se han **derivado
+leyendo** el repositorio. Una ejecución real los **demostraría**, y probablemente revele otros que no
+es posible anticipar sin correr el flujo (ver §10, paso 4).
 
 ---
 
@@ -270,30 +326,162 @@ capa de definición, pero **nunca se ha ejercitado** con código real.
 | **2** | **Versión única del harness** (D1) | Hace el harness instanciable de verdad |
 | **3** | **`instanciar-harness`** | Convierte el harness en reutilizable |
 | **4** | **Primera aplicación real**, un solo componente, ciclo completo | Prueba las 4 fases end-to-end |
-| **5** | **Perfiles de dominio** (D2) + **modo ligero** (D3) | Especialización, ya sobre un flujo ejercitado |
+| **5** | **Perfiles de dominio** (D2) + **modo ligero** (D3) | Especialización, ya sobre un flujo ejercitado. Los perfiles se **extraen del uso**, no se diseñan por anticipado (§5, D2) |
 | **6** | **Materializador de stack** (nivel 3) + templates | Multi-componente |
 
 > El paso 4 es el que aporta la información que **no se puede obtener leyendo**: los huecos que solo
 > aparecen cuando el flujo se ejecuta. Los pasos 5 y 6 deberían llegar **después**, para no
 > hornear supuestos en `AGENTS.md`, que es el sitio más caro de cambiar.
+>
+> A4 (§13) condiciona el paso 1 y **también** el paso 6: el materializador necesita escribir en
+> `scripts/`, y hoy ningún rol tiene permiso ahí.
 
 ---
 
 ## 11. Decisiones abiertas
 
-| # | Decisión | Responsable |
+> **Cómo se cierra una decisión**: la columna *Respuesta* pasa de `Abierta` a
+> `Cerrada <fecha> — <decisión>` y, si la decisión tiene alternativas reales, se registra un ADR
+> (columna *ADR*). Mientras esté `Abierta`, la decisión bloquea el paso indicado en *Antes de*.
+
+| # | Decisión | Quién decide | Antes de | Respuesta | ADR |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| A1 | Forma del identificador único de versión del harness (§5, D1) | Juan Moreno | paso 2 | `Abierta` | pendiente |
+| A2 | Mecanismo de herencia base → perfil de dominio (§5, D2) | Juan Moreno | paso 5 | `Abierta` | pendiente |
+| A3 | ¿`AGENTS.md` del proyecto propio o derivado? (anexo A) | Juan Moreno | paso 3 | `Abierta` | pendiente |
+| A4 | ¿`scripts/**` escribible por el Developer? (anexo B) | Juan Moreno + revisión Tech Lead | paso 1 | `Abierta` | pendiente |
+| A5 | ¿Todo componente de aplicación merece ciclo completo, o hay umbral por tamaño? | Juan Moreno (Product Owner) | paso 5 | `Abierta` | pendiente |
+| A6 | Primera aplicación de prueba y su stack | Juan Moreno (Product Owner) | paso 4 | `Abierta` | pendiente |
+| A7 | ¿Se crea remoto git para que R3 (PR) sea ejecutable? | Juan Moreno | paso 1 | `Abierta` | pendiente |
+
+### Qué decisor corresponde a cada decisión
+
+La asignación no es arbitraria: sigue la lógica de gates de `AGENTS.md` §7.
+
+| Decisión | Decisor | Por qué esa persona |
 | :--- | :--- | :--- |
-| A1 | Forma del identificador único de versión del harness (§5, D1) | Humano responsable |
-| A2 | Mecanismo de herencia base → perfil de dominio (§5, D2) | Humano responsable |
-| A3 | ¿`AGENTS.md` del proyecto es específico (con drift) o referencia al harness base? | Humano responsable |
-| A4 | ¿`scripts/**` es superficie escribible por el Developer, y con qué límites? | Humano responsable + Tech Lead |
-| A5 | ¿Todo componente de aplicación merece ciclo completo, o hay umbral por tamaño? | Product Owner humano |
-| A6 | Primera aplicación de prueba y su stack | Humano responsable |
-| A7 | ¿Se crea remoto git para que R3 (PR) sea ejecutable? | Humano responsable |
+| A1, A2, A3 | Juan Moreno (responsable del harness) | Tocan la ley y `.harness/**` — §9 exige aprobación humana explícita |
+| A4 | Juan Moreno + Tech Lead humano | Toca `.agents/policies/permissions.yaml` — es un cambio de governance, como G2 |
+| A5 | Juan Moreno como Product Owner | Define el ciclo de vida del producto |
+| A6 | Juan Moreno como Product Owner | Es el alcance de la primera feature: gate G1 |
+| A7 | Juan Moreno | Infraestructura del repositorio |
+
+> **Nota**: la columna *Quién decide* lleva **nombre**, no un rol genérico, porque «Humano
+> responsable» no permite saber a quién preguntar. Si se delega una decisión, el nombre se actualiza.
 
 ---
 
-## 12. Documentos relacionados
+## 12. Anexo A — A3 en detalle: `AGENTS.md` del proyecto
+
+### La tensión real
+
+`AGENTS.md` es la ley y **todo agente debe leerlo como precondición** (§0 y §6 de la ley). Pero ese
+archivo **ya es hoy una mezcla** de dos naturalezas distintas:
+
+| Sección de `AGENTS.md` | Naturaleza | ¿Debería cambiar por proyecto? |
+| :--- | :--- | :--- |
+| §1 Reglas de oro R1–R10 | **Ley** | **No.** Es el contrato del método |
+| §2 Estándares de código | Ley | No (con matiz: el idioma de los comentarios sí) |
+| §3 Convenciones de nombres (ramas, commits) | Ley | No |
+| §4 Estructura del repositorio | **Mixta** | Referencia `.agents/`, `.harness/` (harness) **y** `src/`, `tests/` (proyecto) |
+| §5 Definition of Done | Ley | No |
+| §6 Protocolo de subagentes | Ley | No |
+| §7 Gates G1–G3 | Ley | No |
+| §8 Criterios del Verifier | Ley | No |
+| §9 ADRs y cambios a la ley | Ley | No |
+
+**§4 es el síntoma**: un archivo de ley describiendo `src/`. Es ley conteniendo datos de proyecto.
+Ahí está exactamente A3.
+
+### Las cuatro opciones, con su coste
+
+| Opción | Cómo | Problema |
+| :--- | :--- | :--- |
+| **a. Copia completa por proyecto** | Cada proyecto tiene su `AGENTS.md` íntegro y autónomo | **Drift garantizado**: mejorar R5 obliga a actualizar N archivos. Y peor: el proyecto puede editar su propia ley, que es justo lo que R4 intenta impedir |
+| **b. Referencia fina** | `AGENTS.md` del proyecto declara la versión del harness y referencia la ley base | El agente debe leer dos archivos. Además, los subagentes de Copilot **no leen `AGENTS.md` automáticamente** — ya se resolvió incrustando la ley en los `.agent.md` |
+| **c. Generado** | `AGENTS.md` del proyecto se **genera** desde (ley base + parámetros del proyecto) | Requiere generador y marcar el archivo como no editable |
+| **d. Partido** | Ley inmutable en el harness + `project.yaml` con lo específico | Dos sitios; hay que resolver qué lee el agente |
+
+### Recomendación: opción (c), y hay precedente en el propio código
+
+El argumento decisivo no es teórico: **el repositorio ya aceptó este patrón**. `sync-adapters.sh`
+hace exactamente esto con los agentes:
+
+```bash
+echo "<!-- GENERADO por scripts/sync-adapters.sh — NO EDITAR A MANO."
+echo "## Ley del repositorio (AGENTS.md) — normativa, prevalece sobre todo lo demás"
+sed -n '/^## 0\./,$p' "$LAW"
+```
+
+Incrusta la ley en cada `.agent.md` y lo marca como generado. **El precedente, la convención y el
+mecanismo ya existen.**
+
+Con la opción (c), el drift se controla igual que ya se controla con los adaptadores: **un check que
+falla si el generado diverge**, con la misma forma que `sync-adapters.sh --check`. Es decir,
+`instanciar-harness --check` verificaría que el `AGENTS.md` del proyecto corresponde a la versión
+declarada del harness.
+
+### La separación conceptual que lo hace limpio
+
+| Contenido | Dónde vive | Naturaleza |
+| :--- | :--- | :--- |
+| **Reglas** (R1–R10, gates, protocolo en frío) | Harness base, versionado | Ley — no se edita por proyecto |
+| **Parámetros** (nombre, ramas, rutas, stack, comandos) | `harness.config.json` / `project.yaml` | Datos — sí cambian por proyecto |
+| **`AGENTS.md` del proyecto** | Generado de ambos | Artefacto, con cabecera «NO EDITAR A MANO» |
+
+Esta separación responde a A3 y de paso corrige §4: la estructura del repositorio deja de ser **ley**
+y pasa a ser **parámetro**, porque en un proyecto multi-componente las rutas dependen del stack.
+
+---
+
+## 13. Anexo B — A4 en detalle: qué puede escribir el Developer
+
+### La regla general que resuelve todos los casos
+
+> **El Developer no puede escribir nada que el Verifier use como evidencia de su trabajo.**
+
+Es la misma lógica que R7 (*prohibido debilitar tests*). Si el Developer puede editar
+`validate_harness.py`, puede hacer que su propio juez lo declare inocente. Es un **conflicto de
+interés estructural**, no un problema de confianza.
+
+Por eso **abrir `scripts/**` en bloque es un error de governance**, aunque parezca la solución obvia:
+`validate_harness.py` e `init.sh` viven ahí, y son las herramientas con las que el Verifier juzga.
+
+### Clasificación de casos
+
+| Caso de uso | ¿Escribe el Dev? | Dónde debe vivir | Por qué |
+| :--- | :--- | :--- | :--- |
+| Utilidad de desarrollo (seed de BD, generador de fixtures, cliente del API) | **Sí** | `tools/` (ruta nueva, escribible) | Es código de proyecto, no del harness |
+| Runner de migraciones de esquema | **Sí** | `tools/` o el componente | Ídem |
+| Script de build/deploy del componente | **Sí** | Dentro del componente | El `template.yaml` lo declara en `extensions` |
+| Código generado (cliente del contrato, tipos) | **Sí, regenerado** | El componente | Es output, no autoría |
+| `validate_harness.py`, `harness_yaml.py`, `diagnose_harness.py` | **NO** | `scripts/` protegido | **Son el juez.** Conflicto de interés |
+| `init.sh` como gate | **NO** | Raíz protegida | R6 + conflicto de interés |
+| `sync-adapters.sh` | **NO** | `scripts/` protegido | R4 explícito |
+| `resolve-stack.py`, `materialize-stack.sh` | **NO por el Dev** | `scripts/` protegido | Herramientas del harness |
+| Cualquier check que lea el Verifier | **NO** | Protegido | Regla general de arriba |
+
+### Cómo se construyen entonces el runner y el materializador
+
+| Camino | Descripción | Veredicto |
+| :--- | :--- | :--- |
+| **1. Rol nuevo `harness-maintainer`** | Rol con `writable_paths: [scripts/**, .harness/**, .agents/**]`, obligado a PR + revisión humana | **Recomendado.** Separa responsabilidades de verdad: quien escribe el harness no es quien implementa la aplicación |
+| **2. PR autorada por humano** | Un humano escribe el cambio del harness | Funciona, pero ata el harness al tiempo disponible del humano |
+| **3. `scripts/**` abierto + lista negra** | Abrir todo y proteger archivos concretos | **Descartado.** Una deny-list envejece mal: cada script nuevo del harness queda escribible por olvido. Y contradice el modelo **deny-first** que ya declara `permissions.yaml` |
+
+**Coherencia con lo ya existente**: la política actual dice *«lo que no está explícitamente permitido,
+está prohibido»* (allowlist). Abrir `scripts/**` con una lista negra sería **cambiar de modelo de
+permisos** para resolver un caso puntual — exactamente el tipo de decisión que conviene registrar
+en un ADR.
+
+**Nota sobre el nombre de la carpeta.** Si `tools/` es la superficie de proyecto, hay que decidirlo
+junto con el template: ¿`tools/` en la raíz del proyecto o dentro de cada componente? Sugerencia:
+**dentro del componente**, porque cada uno tiene su lenguaje y su runner — y así su `template.yaml`
+declara `extensions: [tools/**]` y nadie tiene que ampliar la política por dominio.
+
+---
+
+## 14. Documentos relacionados
 
 - [`docs/desacoplamiento-arquitectura-software.md`](./desacoplamiento-arquitectura-software.md) — diseño del eje declarativo de stack (nivel 3)
 - [`AGENTS.md`](../AGENTS.md) — ley del repositorio (R1–R10, gates G1–G3)
