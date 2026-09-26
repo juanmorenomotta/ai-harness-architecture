@@ -3,6 +3,8 @@ name: sdd-security-reviewer
 description: "Análisis adversario del diff buscando vulnerabilidades y secretos. Use when reviewing a change for security, checking for leaked credentials, injection, insecure deserialization, or new risky dependencies."
 role: "Security Reviewer"
 phase: "verify (opcional, en paralelo)"
+skills:
+  - security-review
 tools:
   - read
   - search

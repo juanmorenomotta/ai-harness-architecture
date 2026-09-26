@@ -3,6 +3,8 @@ name: sdd-init
 description: "Convierte un prompt de feature en un alcance medible. Use when starting a new feature, need scope.md, acceptance criteria, or non-goals defined before any design work."
 role: "Product Owner / Scope"
 phase: "init"
+skills:
+  - spec-authoring
 tools:
   - read
   - search

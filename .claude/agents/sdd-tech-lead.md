@@ -3,6 +3,9 @@ name: sdd-tech-lead
 description: "Transforma scope.md en diseño técnico y plan de tareas atómicas. Use when converting an approved scope into design.md, architecture decisions, interfaces, or task decomposition."
 role: "Tech Lead / Design"
 phase: "design"
+skills:
+  - task-decomposition
+  - adr-record
 tools:
   - read
   - search
@@ -44,7 +47,8 @@ y un **plan de tareas atómicas**. **No escribes código de producción.**
    - **Dependencias nuevas**: cada una con justificación y alternativa descartada (estándar §2.6).
    - **Riesgos** técnicos y su mitigación.
    - **Estrategia de test**: qué se prueba, con qué tipo de test, en qué nivel.
-2. **Tareas** (`tasks/NNN-<slug>.md`), una por archivo, numeradas desde `001`:
+2. **Tareas** (`tasks/NNN-<slug>.md`), una por archivo, numeradas desde `001`,
+   siguiendo `skills/task-decomposition`:
    - Cada tarea debe ser **atómica**: un solo commit, un solo objetivo.
    - Cada tarea incluye, obligatoriamente:
      ```

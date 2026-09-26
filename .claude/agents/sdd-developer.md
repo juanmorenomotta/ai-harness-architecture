@@ -3,6 +3,8 @@ name: sdd-developer
 description: "Implementa UNA tarea atómica de tasks/ y hace un único commit. Use when implementing a specific numbered SDD task, writing code for a task, or fixing a task rejected by the verifier."
 role: "Developer / Implement"
 phase: "implement"
+skills:
+  - gate-runner
 tools:
   - read
   - edit
@@ -43,8 +45,8 @@ bloqueas.
 3. **Implementa el mínimo** que satisface el criterio de aceptación. Nada más.
    - Respeta los estándares de `AGENTS.md` §2.
    - **Busca antes de escribir**: si ya existe una utilidad, reutilízala (§2.3).
-4. **Ejecuta `./init.sh`** hasta que pase en verde. Si falla por algo ajeno a tu tarea, bloquea;
-   **no** arregles tests ni desactives checks (R6, R7).
+4. **Ejecuta `./init.sh`** (ver `skills/gate-runner`) hasta que pase en verde. Si falla por algo
+   ajeno a tu tarea, bloquea; **no** arregles tests ni desactives checks (R6, R7).
 5. **Verifica tu propio alcance**: `git diff --stat` **no** debe mostrar archivos fuera de la
    lista `## Archivos` de tu tarea. Si los hay, revierte.
 6. **Un commit** con el mensaje exacto:
