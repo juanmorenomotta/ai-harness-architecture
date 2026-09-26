@@ -1,4 +1,4 @@
-# deepseek-harness
+# AI-Harness-Architecture
 
 Harness SDD (Specification-Driven Development) **agnóstico de modelo**, para orquestación
 multiagente sobre artefactos en disco.
@@ -41,7 +41,8 @@ modelo **no** obliga a reescribir prompts.
 | Capa | Ubicación | Qué contiene | ¿Menciona modelos? |
 | :--- | :--- | :--- | :--- |
 | **Ley** | `AGENTS.md` | Contrato compartido, reglas de oro, estándares | No |
-| **Definición de rol** | `.agents/agents/*.md` | Qué hace cada agente, sus `tools`, sus salidas | **No** (verificado en CI) |
+| **Definición de rol** | `.agents/agents/*.md` | Qué hace cada agente, sus `tools`, sus `skills` | **No** (verificado en CI) |
+| **Conocimiento procedimental** | `.agents/skills/*/SKILL.md` | Cómo se hace un procedimiento, bajo demanda | **No** (verificado en CI) |
 | **Configuración de ejecución** | `.harness/models.yaml` | Asignación rol → modelo | **Solo aquí** |
 | **Adaptadores** | `.github/agents/`, `.claude/`, `.gemini/`, `.codex/` | Traducción al vocabulario de cada CLI | Generados |
 
@@ -49,8 +50,9 @@ modelo **no** obliga a reescribir prompts.
 `.github/agents/*.agent.md`, incrustando la ley y el prompt del rol en cada agente, porque
 los subagentes de Copilot no leen `AGENTS.md` automáticamente.
 
-`scripts/validate_harness.py` **falla** si un prompt de rol menciona un modelo: la regla se
-comprueba, no se confía.
+`scripts/validate_harness.py` **falla** si un prompt de rol menciona un modelo (la regla se
+comprueba, no se confía), y **advierte** si el frontmatter de una skill usa campos no admitidos
+por VS Code (un campo ajeno es un fallo silencioso de descubrimiento).
 
 ---
 
@@ -95,16 +97,28 @@ Los gates G1/G2/G3 exigen aprobación humana; ningún agente aprueba su propio g
 
 ### Skills de Nivel 1
 
-| Skill | Para qué | La usa |
+El **agente** responde a *quién* actúa, *en qué fase* y *con qué permisos y modelo*; la
+**skill** responde a *cómo* se hace un procedimiento. No es una jerarquía: son dos ejes
+ortogonales, y la skill se carga **bajo demanda**, cuando su `description` encaja con la tarea.
+
+El vínculo se declara **en una sola dirección**, en el campo `skills:` del frontmatter del rol, y
+el inverso se deriva. No se escribe `used_by` en la skill (ver
+[ADR-003](./.spec/_harness/ADR/003-relacion-agente-skill-como-dato-verificable.md)).
+
+| Skill | Para qué | La declara |
 | :--- | :--- | :--- |
-| `sdd-orchestrator` | Delega fases, resuelve modelo por rol, respeta gates | Orchestrator |
-| `spec-authoring` | Convierte una petición vaga en criterios verificables | sdd-init |
-| `task-decomposition` | Diseño → tareas atómicas de un commit | sdd-tech-lead |
-| `gate-runner` | Ejecuta e interpreta `init.sh`; clasifica el fallo | Developer, Verifier |
-| `verify-report` | Produce `verify.md` con evidencia y veredicto | sdd-verifier |
-| `adr-record` | Registra decisiones con alternativas y consecuencias | sdd-tech-lead |
-| `security-review` | Checklist de seguridad sobre el diff | sdd-security-reviewer |
-| `model-switching` | Cambia el modelo de un rol; diagnostica 401/402/403 | Humano |
+| `sdd-orchestrator` | Delega fases, resuelve modelo por rol, respeta gates | — (es la definición del propio rol) |
+| `spec-authoring` | Convierte una petición vaga en criterios verificables | `sdd-init` |
+| `task-decomposition` | Diseño → tareas atómicas de un commit | `sdd-tech-lead` |
+| `adr-record` | Registra decisiones con alternativas y consecuencias | `sdd-tech-lead` |
+| `gate-runner` | Ejecuta e interpreta `init.sh`; clasifica el fallo | `sdd-developer`, `sdd-verifier` |
+| `verify-report` | Produce `verify.md` con evidencia y veredicto | `sdd-verifier` |
+| `security-review` | Checklist de seguridad sobre el diff | `sdd-security-reviewer`, `sdd-verifier` |
+| `model-switching` | Cambia el modelo de un rol; diagnostica 401/402/403 | Humano (fuera del ciclo SDD) |
+
+`scripts/validate_harness.py` **falla** si un rol declara una skill inexistente o cita en su
+procedimiento una skill que no declaró, y **advierte** si una skill queda huérfana o si su
+frontmatter usa campos no admitidos.
 
 ---
 

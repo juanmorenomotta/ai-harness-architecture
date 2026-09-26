@@ -54,6 +54,17 @@ PROVIDERS_FILE = ".harness/providers.yaml"
 ROUTING_FILE = ".harness/routing.yaml"
 POLICIES_FILE = ".agents/policies/permissions.yaml"
 AGENTS_DIR = ".agents/agents"
+SKILLS_DIR = ".agents/skills"
+
+# El orquestador es el único rol cuya definición ES la skill: no tiene prompt
+# propio en .agents/agents/, así que se auto-consume y no puede ser huérfana.
+ORCHESTRATOR_SKILL = "sdd-orchestrator"
+
+# Skills cuyo OBJETO es el modelo, no su consumidor. `model-switching` explica
+# cómo cambiar el modelo de un rol: citar nombres de modelo es su contenido, no
+# un acoplamiento. La regla de agnosticismo protege el conocimiento
+# procedimental de los roles, no la documentación sobre modelos.
+MODEL_SCOPED_SKILLS = {"model-switching"}
 
 EXPECTED_ROLES = [
     "sdd-init",
@@ -62,6 +73,19 @@ EXPECTED_ROLES = [
     "sdd-verifier",
     "sdd-security-reviewer",
 ]
+
+# Referencia oficial de VS Code (Agent Skills): campos ADMITIDOS en el
+# frontmatter de SKILL.md. Un campo desconocido aquí no da error: produce un
+# fallo silencioso de descubrimiento. Por eso el vínculo inverso (qué rol usa
+# cada skill) se DERIVA del campo `skills:` de los roles, en vez de declararse
+# en la skill.
+SKILL_FRONTMATTER_KEYS = {
+    "name",
+    "description",
+    "argument-hint",
+    "user-invocable",
+    "disable-model-invocation",
+}
 
 MODEL_IN_PROMPT = re.compile(
     r"\b(gpt-[0-9][\w.\-]*|claude-[\w.\-]+|gemini-[\w.\-]+|qwen[\w.\-]*|"
@@ -330,6 +354,31 @@ def check_layer_separation(report: Report, allowed_aliases: set[str]) -> None:
             )
             break
 
+    # Simetría para skills: el conocimiento procedimental tampoco nombra modelos.
+    # Una skill con un nombre de modelo dentro se vuelve inaplicable al cambiar
+    # de modelo, que es justo lo que la regla de capas evita.
+    skills_dir = ROOT / SKILLS_DIR
+    if not skills_dir.exists():
+        return
+    for skill_file in sorted(skills_dir.glob("*/SKILL.md")):
+        report.tick()
+        if "model" in frontmatter(skill_file):
+            report.error(
+                f"{skill_file.relative_to(ROOT)}: declara 'model' en el frontmatter; "
+                "no es un campo admitido y la skill debe ser agnóstica de modelo"
+            )
+        if skill_file.parent.name in MODEL_SCOPED_SKILLS:
+            continue  # su objeto es el modelo: los nombres son datos, no acoplamiento
+        for match in MODEL_IN_PROMPT.finditer(body(skill_file)):
+            name = match.group(0)
+            if name.lower() in lowered_aliases:
+                continue
+            report.error(
+                f"{skill_file.relative_to(ROOT)}: menciona el modelo '{name}'. "
+                "La skill debe ser agnóstica de modelo (AGENTS.md §4)"
+            )
+            break
+
 
 def check_permissions(report: Report, permissions: dict) -> None:
     """Políticas de permisos presentes y con la restricción clave del Verifier."""
@@ -365,31 +414,101 @@ def check_law_rules(report: Report) -> None:
         report.warn(f"{LAW_FILE}: no se menciona explícitamente la prohibición de auto-merge")
 
 
-def check_skills_referenced(report: Report) -> None:
-    """Las skills referenciadas por los roles deben existir, con frontmatter válido."""
-    skills_dir = ROOT / ".agents" / "skills"
-    skill_names = {p.parent.name for p in skills_dir.glob("*/SKILL.md")} if skills_dir.exists() else set()
+def _declared_skills(prompt: Path) -> set[str]:
+    """Skills declaradas en el frontmatter (`skills:`) de un rol."""
+    raw = frontmatter(prompt).get("skills")
+    if isinstance(raw, list):
+        return {str(item).strip() for item in raw if str(item).strip()}
+    if isinstance(raw, str) and raw.strip():
+        return {part.strip() for part in raw.strip("[]").split(",") if part.strip()}
+    return set()
 
+
+def _cited_skills(text: str) -> set[str]:
+    """Skills citadas en el cuerpo de un prompt como `skills/<nombre>`."""
+    return set(re.findall(r"skills/([a-z0-9\-]+)", text))
+
+
+def check_skills_referenced(report: Report) -> None:
+    """Coherencia agente ↔ skill: declaración, uso efectivo y cobertura.
+
+    El vínculo se declara UNA sola vez, en el campo `skills:` del rol, y la
+    relación inversa se DERIVA. No se escribe `used_by` en la skill: el
+    frontmatter de SKILL.md solo admite campos concretos y uno desconocido es un
+    fallo silencioso de descubrimiento (ver ADR-003).
+
+    Se comprueba que: (a) lo declarado existe; (b) lo citado en el procedimiento
+    está declarado; (c) ninguna skill queda huérfana; (d) el frontmatter de cada
+    skill solo usa campos admitidos.
+    """
     agents_dir = ROOT / AGENTS_DIR
+    skills_dir = ROOT / SKILLS_DIR
+    existing = _skill_names(skills_dir)
+
+    declared_by: dict[str, set[str]] = {}
+    corpus: list[str] = [read_text(POLICIES_FILE), read_text("init.sh"), read_text(LAW_FILE)]
+
     if agents_dir.exists():
         for prompt in sorted(agents_dir.glob("*.md")):
-            for referenced in re.findall(r"skills/([a-z0-9\-]+)", body(prompt)):
+            role_body = body(prompt)
+            corpus.append(role_body)
+            declared = _declared_skills(prompt)
+            declared_by[prompt.stem] = declared
+
+            for name in sorted(declared):
                 report.tick()
-                if referenced not in skill_names:
+                if name not in existing:
                     report.error(
-                        f"{prompt.relative_to(ROOT)}: referencia la skill '{referenced}' "
-                        "que no existe en .agents/skills/"
+                        f"{prompt.relative_to(ROOT)}: declara la skill '{name}' en "
+                        f"'skills:', pero no existe en {SKILLS_DIR}/"
                     )
 
+            for cited in sorted(_cited_skills(role_body)):
+                report.tick()
+                if cited not in declared:
+                    report.error(
+                        f"{prompt.relative_to(ROOT)}: cita 'skills/{cited}' en el "
+                        "procedimiento pero no lo declara en 'skills:'; en arranque en "
+                        "frío ese vínculo no existe"
+                    )
+    else:
+        report.error(f"falta el directorio {AGENTS_DIR}/")
+
     if not skills_dir.exists():
+        report.error(f"falta el directorio {SKILLS_DIR}/")
         return
+
+    for skill_file in sorted(skills_dir.glob("*/SKILL.md")):
+        corpus.append(skill_file.read_text(encoding="utf-8"))
+    all_text = "\n".join(corpus)
+
     for skill_file in sorted(skills_dir.glob("*/SKILL.md")):
         report.tick()
         _check_single_skill(report, skill_file)
 
+        name = skill_file.parent.name
+        if name == ORCHESTRATOR_SKILL:
+            continue  # su rol es ella misma: no depende de un prompt de agente
+
+        report.tick()
+        consumers = {r for r, names in declared_by.items() if name in names}
+        mentioned = re.search(rf"\b{re.escape(name)}\b", all_text) is not None
+        if not consumers and not mentioned:
+            report.warn(
+                f"{SKILLS_DIR}/{name}/: ninguna skill declarada la usa ni se menciona "
+                "en el harness. ¿Huérfana? Declararla en el 'skills:' de su rol"
+            )
+
+
+def _skill_names(skills_dir: Path) -> set[str]:
+    """Nombres de las skills realmente descubribles (carpeta con SKILL.md)."""
+    if not skills_dir.exists():
+        return set()
+    return {p.parent.name for p in skills_dir.glob("*/SKILL.md")}
+
 
 def _check_single_skill(report: Report, skill_file: Path) -> None:
-    """Valida el frontmatter de una skill (nombre y descripción descubribles)."""
+    """Valida el frontmatter de una skill (descubrible y sin campos ajenos)."""
     fm = frontmatter(skill_file)
     folder = skill_file.parent.name
 
@@ -397,6 +516,14 @@ def _check_single_skill(report: Report, skill_file: Path) -> None:
         report.error(
             f"{skill_file.relative_to(ROOT)}: 'name: {fm.get('name')}' "
             f"no coincide con la carpeta '{folder}' (fallo silencioso de descubrimiento)"
+        )
+
+    extra = sorted(set(fm) - SKILL_FRONTMATTER_KEYS)
+    if extra:
+        report.warn(
+            f"{skill_file.relative_to(ROOT)}: campo(s) no admitido(s) en el frontmatter: "
+            f"{', '.join(extra)}. VS Code solo admite "
+            f"{', '.join(sorted(SKILL_FRONTMATTER_KEYS))}"
         )
 
     description = fm.get("description")
