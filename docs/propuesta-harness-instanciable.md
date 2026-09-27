@@ -346,13 +346,13 @@ es posible anticipar sin correr el flujo (ver §10, paso 4).
 
 | # | Decisión | Quién decide | Antes de | Respuesta | ADR |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| A1 | Forma del identificador único de versión del harness (§5, D1) | Juan Moreno | paso 2 | `Abierta` | pendiente |
-| A2 | Mecanismo de herencia base → perfil de dominio (§5, D2) | Juan Moreno | paso 5 | `Abierta` | pendiente |
-| A3 | ¿`AGENTS.md` del proyecto propio o derivado? (anexo A) | Juan Moreno | paso 3 | `Abierta` | pendiente |
-| A4 | ¿`scripts/**` escribible por el Developer? (anexo B) | Juan Moreno + revisión Tech Lead | paso 1 | `Abierta` | pendiente |
-| A5 | ¿Todo componente de aplicación merece ciclo completo, o hay umbral por tamaño? | Juan Moreno (Product Owner) | paso 5 | `Abierta` | pendiente |
-| A6 | Primera aplicación de prueba y su stack | Juan Moreno (Product Owner) | paso 4 | `Abierta` | pendiente |
-| A7 | ¿Se crea remoto git para que R3 (PR) sea ejecutable? | Juan Moreno | paso 1 | `Abierta` | pendiente |
+| A1 | Forma del identificador único de versión del harness (§5, D1) | Juan Moreno | paso 2 | `Cerrada 2026-09-27 - Es unico mediante .harness/harness.version + check de coherencia en el validador. Agrega las 5 mas y si falla diverge ` | pendiente |
+| A2 | Mecanismo de herencia base → perfil de dominio (§5, D2) | Juan Moreno | paso 5 | `Cerrada 2026-09-27 - Sin herencia, un solo archivo base la diferencia entre dominios se traslada al Nivel 3 (componente)` | pendiente |
+| A3 | ¿`AGENTS.md` del proyecto propio o derivado? (anexo A) | Juan Moreno | paso 3 | `Cerrada 2026-09-27 - El AGENTS.md es derivado y se genera desde (Ley base + parameros del proyecto). Requiere generador y marcar archivo como no Editable` | pendiente |
+| A4 | ¿`scripts/**` escribible por el Developer? (anexo B) | Juan Moreno + revisión Tech Lead | paso 1 | `Cerrada 2026-09-27 - No. Crear un nuevo Rol harness-maintainer. Rol con writable_paths: [scripts/**, .harness/**, .agents/**], obligado a PR + revisión humana` | pendiente |
+| A5 | ¿Todo componente de aplicación merece ciclo completo, o hay umbral por tamaño? | Juan Moreno (Product Owner) | paso 5 | `Cerrada 2026-09-27 - Si. Todo componentes de aplicación merece ciclo completo sin importar su tamaño` | pendiente |
+| A6 | Primera aplicación de prueba y su stack | Juan Moreno (Product Owner) | paso 4 | `Cerrada 2026-09-27 - La primera aplicación de prueba sera un Modulo de autenticación con correo y password utilizando Laravel 12 con PHP 8.2 composer. Dame una guia completa para lograr este objetivo ya que pasara a ser un template estandar para iniciar proyectos nuevos basado en Hernes instanciable` | pendiente |
+| A7 | ¿Se crea remoto git para que R3 (PR) sea ejecutable? | Juan Moreno | paso 1 | `Cerrada 2026-09-27 - Si. Remoto privado en Github. Dame el plan y los pasos a seguir para conseguir el repo remoto` | pendiente |
 
 ### Qué decisor corresponde a cada decisión
 
