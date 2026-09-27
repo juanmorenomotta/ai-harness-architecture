@@ -138,28 +138,27 @@ los proyectos y componentes que origina, para poder actualizarlos a lo largo del
 versiones actuales (§2) no sirven porque ninguna representa al conjunto, y pueden divergir sin que
 nada lo detecte.
 
-**Pendiente de decidir**: la forma del identificador. Opciones:
-
-| Opción | Ventaja | Problema |
-| :--- | :--- | :--- |
-| Campo nuevo en `harness.config.json` (`harnessVersion`) | Un solo sitio, ya versionado | No agrega las 5 versiones existentes |
-| `.harness/harness.version` + check de coherencia en el validador | Agrega las 5 y **falla si divergen** | Un archivo más |
-| Tag semver del repositorio del harness | Es el mecanismo estándar de git | No captura cambios de configuración sin tag |
+**Decidido** (ADR-004): `.harness/harness.version` como único punto de verdad, agregando las cinco
+versiones de los artefactos, con un check en el validador que **falla si alguna diverge**.
 
 > Toca `.harness/**` y `harness.config.json` → **R4: PR separada con aprobación humana**.
 
-### D2 — Un harness **por tipo de componente**, que madura con el tiempo
+### D2 — Un solo harness base; la especialización por dominio vive en el nivel 3
 
-**Decisión**: existirán varios harness, especializados por tipo de componente/aplicación, para que
-cada uno madure con la experiencia acumulada.
+> **Revisión 2026-09-27**: la decisión original de D2 —perfiles de dominio que **heredan** del base—
+> queda **reemplazada** por ADR-005. Se conserva aquí el análisis que la motivó porque explica por qué
+> la conclusión final es la opuesta.
 
-**Riesgo que introduce, y su mitigación.**
+**Decisión original**: existirían varios harness especializados por tipo de componente, con un
+mecanismo de herencia desde un base compartido para evitar que cada dominio derivara en un fork.
+
+**Problema del riesgo que la herencia venía a mitigar.**
 
 Multiplicar harness por dominio reproduce **exactamente el mismo riesgo de divergencia** que
 "copiar el harness por proyecto" (§2). Si cada dominio es un repositorio independiente, en seis
 meses hay cinco harness incompatibles y ninguna lección compartida.
 
-Mitigación propuesta — **herencia explícita, no forks independientes**:
+Mitigación que se propuso entonces — **herencia explícita, no forks independientes**:
 
 ```
 harness-base                    ← el núcleo: roles, skills, políticas, gates
@@ -168,8 +167,7 @@ harness-base                    ← el núcleo: roles, skills, políticas, gates
 └── dominio/mobile
 ```
 
-Los perfiles de dominio **heredan** del base y solo declaran su **delta**. Un cambio en el base se
-propaga; un cambio en un perfil es visible y acotado.
+Los perfiles de dominio heredarían del base y solo declararían su **delta**.
 
 **Dos reglas duras del mecanismo de perfiles:**
 
@@ -219,8 +217,24 @@ una vez**, y lo hace *especulando* sobre diferencias no medidas. El principio de
 lo demuestra: los cinco artefactos con versión divergieron precisamente por crearse por separado sin
 un check que los coordinara.
 
-**Pendiente de decidir**: el mecanismo concreto de herencia (referencia a versión del base + parche de
-delta, o copia generada con sello de versión).
+#### Decisión final — sin herencia, sin perfiles
+
+**No existe mecanismo de herencia ni hay varios harness. Hay un solo harness base, y toda la
+especialización por dominio se traslada al nivel 3 (el componente)** (ADR-005).
+
+La especialización se expresa en tres sitios, todos del componente:
+
+1. **`commands`** — el gate de cada componente declara sus propios comandos (`lint`, `tests`, `gate`).
+2. **`extensions`** — las rutas donde el agente puede escribir, declaradas por el componente.
+3. **`agent_profile.md`** — el conocimiento idiomático de la tecnología (convenciones, anti-patrones,
+   recetas de test), versionado junto al código que describe.
+
+**Regla de promoción**: si un dominio necesita algo que el base no puede expresar, la discusión es
+*«¿debe el base ganar esa opción?»*, no *«creemos otro harness»*. Si la respuesta fuera «creemos otro
+harness», eso indicaría que el base es la abstracción equivocada, y el caso se lleva a un ADR nuevo.
+
+**Se elimina así el trabajo de construir un mecanismo de herencia**, y el delta se va donde el
+análisis demostró que corresponde.
 
 ### D3 — Ciclo completo para aplicaciones, modo ligero para infraestructura
 
@@ -284,12 +298,12 @@ y pasa a **leer** lo que cada componente declara. Es la diferencia entre inferir
 
 | Riesgo | Por qué duele | Mitigación |
 | :--- | :--- | :--- |
-| **Deriva de versión del harness** | 5 proyectos con 5 versiones divergentes | D1: versión única + check; D2: herencia en vez de fork |
+| **Deriva de versión del harness** | 5 proyectos con 5 versiones divergentes | **Resuelto** (ADR-004): versión única + check que falla si diverge |
 | **Templates que se pudren** | Runtimes EOL, CVEs acumuladas | Suite de conformidad antes de admitir un template |
 | **Clonar código de terceros ejecuta código** | `postinstall`, hooks de git = ejecución remota | Allowlist de hosts + prohibición de scripts de instalación (coherente con la prohibición de `curl \| sh` ya vigente) |
 | **N identidades de gate** | Cada componente con su `init.sh` | Agregación jerárquica; el gate raíz es el **único** veredicto |
 | **Coste multi-repo** | 4 componentes × 5 fases = 20 ciclos | D3: modo ligero para infraestructura |
-| **Ambigüedad de "harness por dominio"** | Puede derivar en N harness incompatibles | D2: perfiles que heredan del base |
+| **Ambigüedad de "harness por dominio"** | Puede derivar en N harness incompatibles | **Resuelto** (ADR-005): un solo base; la especialización vive en el nivel 3 |
 
 ---
 
@@ -326,15 +340,15 @@ es posible anticipar sin correr el flujo (ver §10, paso 4).
 | **2** | **Versión única del harness** (D1) | Hace el harness instanciable de verdad |
 | **3** | **`instanciar-harness`** | Convierte el harness en reutilizable |
 | **4** | **Primera aplicación real**, un solo componente, ciclo completo | Prueba las 4 fases end-to-end |
-| **5** | **Perfiles de dominio** (D2) + **modo ligero** (D3) | Especialización, ya sobre un flujo ejercitado. Los perfiles se **extraen del uso**, no se diseñan por anticipado (§5, D2) |
-| **6** | **Materializador de stack** (nivel 3) + templates | Multi-componente |
+| **5** | **Segunda aplicación de otro tipo** (frontend o segundo backend de otra tecnología) | Es lo que **revela el delta real** entre dominios. Sin esta evidencia no hay especialización que extraer (ADR-005) |
+| **6** | **Materializador de stack** (nivel 3) + templates | Multi-componente. Es donde vive la especialización por dominio |
 
 > El paso 4 es el que aporta la información que **no se puede obtener leyendo**: los huecos que solo
-> aparecen cuando el flujo se ejecuta. Los pasos 5 y 6 deberían llegar **después**, para no
-> hornear supuestos en `AGENTS.md`, que es el sitio más caro de cambiar.
+> aparecen cuando el flujo se ejecuta. El paso 6 debería llegar **después** del 5, para no hornear
+> supuestos en `AGENTS.md`, que es el sitio más caro de cambiar.
 >
 > A4 (§13) condiciona el paso 1 y **también** el paso 6: el materializador necesita escribir en
-> `scripts/`, y hoy ningún rol tiene permiso ahí.
+> `scripts/`, y hoy ningún rol tiene permiso ahí (resuelto por ADR-007 con el rol `harness-maintainer`).
 
 ---
 
