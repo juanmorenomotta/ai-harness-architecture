@@ -1,11 +1,17 @@
-# ADR-009 — Módulo de autenticación (Laravel 12 / PHP 8.2) como primera aplicación y template de referencia
+# ADR-009 — Módulo de autenticación (Laravel 12 + Vue) como primera aplicación y template de referencia
 
-- **Fecha**: 2026-09-27
+- **Fecha**: 2026-09-27 · **Revisión**: 2026-09-27 (de 1 a **2 componentes**)
 - **Estado**: `aceptada` · **Implementación**: **PENDIENTE — requiere resolver un bloqueo previo**
 - **Decisor**: Juan Moreno (Product Owner)
 - **Feature**: `_harness` (decisión de alcance de la prueba del framework)
 - **Cierra**: decisión abierta **A6** de `docs/propuesta-harness-instanciable.md`
-- **Tareas afectadas**: `.spec/auth-laravel/` (nuevo), `scripts/` (soporte de PHP en el gate), `docs/`
+- **Tareas afectadas**: `.spec/auth/` (nuevo), `scripts/` (soporte de PHP en el gate), `docs/`
+
+> **Nota de revisión (2026-09-27)**: la decisión original de este ADR definía **un solo componente**
+> (backend Laravel). El Product Owner precisó el alcance a **dos componentes**: backend Laravel 12 y
+> frontend Vue. La decisión de fondo —auth como primera aplicación y template de referencia— no
+> cambia; se amplía el alcance y aparecen dos consecuencias nuevas (el **contrato** y la **duplicación
+> del ciclo SDD**).
 
 ## Contexto
 
@@ -16,35 +22,51 @@ La primera aplicación **no busca valor de negocio**: busca **estresar el flujo*
 que solo aparecen al ejecutarlo. Pero además se quiere que sirva de **template estándar** para iniciar
 proyectos nuevos sobre el harness instanciable (nivel 3).
 
-Se elige un **módulo de autenticación con correo y contraseña**, en **Laravel 12 con PHP 8.2 y
-Composer**, porque cubre las superficies que más estresan el harness:
+Se elige un **módulo de autenticación con correo y contraseña**, con **dos componentes** (backend
+Laravel 12 / PHP 8.2 y frontend Vue), porque cubre las superficies que más estresan el harness:
 
 | Superficie que ejercita | Por qué importa |
 | :--- | :--- |
 | Entrada de usuario (formularios, validación) | Activa el rol `sdd-security-reviewer` |
 | Autorización, sesiones, tokens | Superficie de seguridad real |
-| Migraciones de esquema (tabla de usuarios) | Ejercita el componente **datos** |
+| Migraciones de esquema (tabla de usuarios, tokens de activación) | Ejercita el componente **datos** |
 | Contraseñas y hashing | Criptografía: punto de la checklist de seguridad |
-| Dependencias nuevas (Composer) | Ejercita §2.6 (dependencia justificada en `design.md`) |
+| **Contrato entre dos componentes** | Ejercita el nivel 3 completo: dos repos que solo hablan por contrato |
+| Dependencias nuevas (Composer y npm) | Ejercita §2.6 (dependencia justificada en `design.md`) |
 
 ## Decisión
 
-**La primera aplicación de prueba es un módulo de autenticación (correo + contraseña) en Laravel 12 /
-PHP 8.2, con un solo componente (backend), y pasa por el ciclo SDD completo** (ADR-008).
+**La primera aplicación de prueba es un módulo de autenticación (correo + contraseña) con DOS
+componentes —backend Laravel 12 / PHP 8.2 y frontend Vue— y ambos pasan por el ciclo SDD completo**
+(ADR-008).
 
 Además, se adopta como **template de referencia**: tras pasar el ciclo completo y verificarse, se
-publica como repositorio de template del nivel 3, con su `template.yaml` y su `agent_profile.md`.
+publican como repositorios de template del nivel 3, con su `template.yaml` y su `agent_profile.md`.
 
 Forma del primer corte:
 
 | Parámetro | Valor |
 | :--- | :--- |
-| Componentes | **1** (backend). Sin frontend, sin móvil |
-| Stack | Laravel 12 · PHP 8.2 · Composer |
+| Componentes | **2**: `backend` (Laravel 12 · PHP 8.2 · Composer) y `frontend` (Vue 3 · Vite · npm) |
 | Base de datos | SQLite (local, sin Docker) o MySQL de XAMPP |
-| Modo | **Ciclo SDD completo** (ADR-008) |
-| Alcance funcional | Registro, login, logout, recuperación de contraseña |
+| Modo | **Ciclo SDD completo**, por componente (ADR-008) |
+| Funcionalidad | Registro con correo + contraseña + validación, **activación por enlace enviado por correo**, login, logout, recuperación de contraseña |
+| Contrato | `.spec/auth/contracts/api.openapi.yaml` — **única costura** entre los dos componentes |
 | Objetivo | Ejercitar las 4 fases y los 3 gates, no cubrir requisitos de producción |
+
+### Qué cambia al tener dos componentes
+
+1. **El ciclo SDD se duplica**: 2 componentes × (init → design → tasks → implement → verify) con sus
+gates. Es el coste correcto según ADR-008 (sin umbral de tamaño).
+2. **Aparece el contrato**, y es crítico: backend y frontend son **repos independientes**; ninguno
+   importa código del otro. El contrato debe definirse en `design.md` **antes de materializar los
+   componentes**, porque ambos dependen de él. Si se materializa el backend primero, el contrato se
+   descubre tarde y el frontend queda desalineado.
+3. **Se activa una decisión de seguridad**: para SPA (Vue) + API (Laravel), el patrón de auth es
+   **token-based** (Sanctum) o **sesión con cookie + CSRF**. No son equivalentes en seguridad; se
+   decide en `design.md` y es materia de `sdd-security-reviewer`.
+4. **El enlace de activación** exige URL firmada con expiración y reenvío — tres criterios de
+   aceptación verificables.
 
 ## Bloqueo previo detectado (medido, no teórico)
 
@@ -114,11 +136,14 @@ Ejercita las cuatro fases y los tres gates humanos. Los huecos del gate serán v
 
 ## Cómo se verificará
 
-1. `.spec/auth-laravel/` contiene `scope.md` (con `Aprobado por:` humano — G1), `design.md` y `tasks/`.
+1. `.spec/auth/` contiene `scope.md` (con `Aprobado por:` humano — G1), `design.md`, `tasks/` y
+   `contracts/api.openapi.yaml`.
 2. Cada tarea de `tasks/` tiene **un** commit `sdd: task NNN - ...` (R2).
 3. `verify.md` con veredicto y, **tras la fase 2**, la salida literal de `./init.sh` con los checks
    PHP en PASS (no en `SKIP`).
-4. `dependency justification` en `design.md` para cada paquete de Composer añadido (§2.6).
+4. `dependency justification` en `design.md` para cada paquete de Composer y de npm añadido (§2.6).
+5. El frontend consume el API **según el contrato**, y el contrato no cambia sin actualizar ambos
+   componentes.
 
 ## Referencias
 

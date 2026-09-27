@@ -2,7 +2,9 @@
 
 - **Fecha**: 2026-09-27
 - **Estado**: `aceptada` · **Implementación**: **PENDIENTE**
-- **Decisor**: Juan Moreno (responsable del harness) — **co-firma pendiente**: revisión Tech Lead humano
+- **Decisor**: Juan Moreno (responsable del harness)
+- **Co-firma**: **Juan Moreno, Tech Lead humano** (los roles pueden coincidir en la misma persona; lo
+  que la ley prohíbe es que un **agente** apruebe un cambio de governance)
 - **Feature**: `_harness`
 - **Cierra**: decisión abierta **A4** de `docs/propuesta-harness-instanciable.md`
 - **Tareas afectadas**: `.agents/agents/harness-maintainer.md` (nuevo), `.agents/policies/permissions.yaml`, `.harness/models.yaml`, adaptadores
