@@ -1,17 +1,19 @@
-# ADR-009 — Módulo de autenticación (Laravel 12 + Vue) como primera aplicación y template de referencia
+# ADR-009 — `auth-service`: componente `cross` encapsulado (Laravel 12) y su frontend consumidor
 
-- **Fecha**: 2026-09-27 · **Revisión**: 2026-09-27 (de 1 a **2 componentes**)
+- **Fecha**: 2026-09-27 · **Revisión**: 2026-09-28 (clase `cross`, contrato propio del proveedor)
 - **Estado**: `aceptada` · **Implementación**: **PENDIENTE — requiere resolver un bloqueo previo**
 - **Decisor**: Juan Moreno (Product Owner)
 - **Feature**: `_harness` (decisión de alcance de la prueba del framework)
 - **Cierra**: decisión abierta **A6** de `docs/propuesta-harness-instanciable.md`
-- **Tareas afectadas**: `.spec/auth/` (nuevo), `scripts/` (soporte de PHP en el gate), `docs/`
+- **Tareas afectadas**: `.spec/auth-service/` (nuevo), `scripts/` (soporte de PHP en el gate), `docs/`
 
-> **Nota de revisión (2026-09-27)**: la decisión original de este ADR definía **un solo componente**
-> (backend Laravel). El Product Owner precisó el alcance a **dos componentes**: backend Laravel 12 y
-> frontend Vue. La decisión de fondo —auth como primera aplicación y template de referencia— no
-> cambia; se amplía el alcance y aparecen dos consecuencias nuevas (el **contrato** y la **duplicación
-> del ciclo SDD**).
+> **Nota de revisión (2026-09-28)**: el alcance se precisa en dos puntos.
+>
+> 1. **`auth` es un componente `cross` encapsulado** (ADR-013): un backend que expone **su API de
+>    autenticación como producto**, consumida por otros componentes (entre ellos un frontend).
+>    No es un «módulo dentro de una aplicación con alcance de proyecto».
+> 2. **El contrato es propiedad del proveedor** (ADR-012), no de un nivel intermedio: `auth-service`
+>    lo mantiene y lo versiona; el consumidor lo referencia **con pin**, sin copiarlo.
 
 ## Contexto
 
@@ -54,18 +56,18 @@ Forma del primer corte:
 | Contrato | `.spec/auth/contracts/api.openapi.yaml` — **única costura** entre los dos componentes |
 | Objetivo | Ejercitar las 4 fases y los 3 gates, no cubrir requisitos de producción |
 
-### Qué cambia al tener dos componentes
+### Qué cambia al ser dos componentes independientes
 
-1. **El ciclo SDD se duplica**: 2 componentes × (init → design → tasks → implement → verify) con sus
-gates. Es el coste correcto según ADR-008 (sin umbral de tamaño).
-2. **Aparece el contrato**, y es crítico: backend y frontend son **repos independientes**; ninguno
-   importa código del otro. El contrato debe definirse en `design.md` **antes de materializar los
-   componentes**, porque ambos dependen de él. Si se materializa el backend primero, el contrato se
-   descubre tarde y el frontend queda desalineado.
-3. **Se activa una decisión de seguridad**: para SPA (Vue) + API (Laravel), el patrón de auth es
-   **token-based** (Sanctum) o **sesión con cookie + CSRF**. No son equivalentes en seguridad; se
-   decide en `design.md` y es materia de `sdd-security-reviewer`.
-4. **El enlace de activación** exige URL firmada con expiración y reenvío — tres criterios de
+1. **Cada uno tiene su propio `.spec/` y su ciclo completo** (ADR-008, ADR-012): `auth-service/.spec/`
+   y `consumidor/.spec/`. No hay `.spec/` compartida.
+2. **El contrato NO se duplica**: es de `auth-service` (proveedor) y el consumidor lo referencia con
+   pin (ADR-012). Esto evita la duplicación silenciosa que sería la sexta del repositorio.
+3. **`auth-service` es `cross`**: su API la consumen terceros, así que necesita ownership declarado
+   `CODEOWNERS`, versionado semver y **gate G4** (ADR-013).
+4. **Se activa una decisión de seguridad**: para SPA + API, el patrón es **token-based** (Sanctum) o
+   **sesión con cookie + CSRF**. No son equivalentes en seguridad; se decide en `design.md` y es
+   materia de `sdd-security-reviewer`.
+5. **El enlace de activación** exige URL firmada con expiración y reenvío — tres criterios de
    aceptación verificables.
 
 ## Bloqueo previo detectado (medido, no teórico)
@@ -125,25 +127,29 @@ decisión todavía; revertir es cambiar el registro y empezar con otro `scope.md
 
 ### Fase 1 — Probar el flujo SDD (desbloqueada hoy)
 
-Ejercita las cuatro fases y los tres gates humanos. Los huecos del gate serán visibles y se registran.
+Ejercita las cuatro fases y los cuatro gates humanos (G1–G4). Los huecos del gate serán visibles y se
+registran.
 
 ### Fase 2 — Verificación real (requiere PR de harness)
 
 1. **PR de harness** (aprobación humana, R4): extender `init.sh` con rama PHP
-   (lint: `php -l` o Laravel Pint; format: Pint `--test`; typecheck: PHPStan/Larastan; tests: `phpunit`).
+   (lint: `php -l` o Laravel Pint; format: Pint `--test`; typecheck: PHPStan/Larastan; tests: `vendor/bin/phpunit`).
+   **Atención**: el `phpunit` global de XAMPP está roto → usar siempre `vendor/bin/phpunit`.
 2. Re-ejecutar el ciclo de verificación: `verify.md` con la salida **literal** del gate.
-3. Publicar el template de referencia con `template.yaml` + `agent_profile.md`.
+3. Publicar el template de referencia con `template.yaml` (incluyendo `class: cross` y `ownership`)
+   y `agent_profile.md`.
 
 ## Cómo se verificará
 
-1. `.spec/auth/` contiene `scope.md` (con `Aprobado por:` humano — G1), `design.md`, `tasks/` y
-   `contracts/api.openapi.yaml`.
-2. Cada tarea de `tasks/` tiene **un** commit `sdd: task NNN - ...` (R2).
+1. `auth-service/.spec/` contiene `scope.md` (con `Aprobado por:` humano — G1), `design.md`, `tasks/`
+   y `verify.md`; el **contrato** vive en el componente proveedor (`api/openapi.yaml`).
+2. Cada tarea de `tasks/` tiene **un** commit `sdd: task NNN - ...` (R2), **en el repositorio del
+   componente**.
 3. `verify.md` con veredicto y, **tras la fase 2**, la salida literal de `./init.sh` con los checks
    PHP en PASS (no en `SKIP`).
 4. `dependency justification` en `design.md` para cada paquete de Composer y de npm añadido (§2.6).
-5. El frontend consume el API **según el contrato**, y el contrato no cambia sin actualizar ambos
-   componentes.
+5. El consumidor declara la **versión** de `auth-service` que consume y **no** guarda copia del
+   contrato. `auth-service` es `cross` y pasa **G4**.
 
 ## Referencias
 
@@ -151,3 +157,4 @@ Ejercita las cuatro fases y los tres gates humanos. Los huecos del gate serán v
 - `docs/desacoplamiento-arquitectura-software.md` — `template.yaml`, `agent_profile.md`
 - `init.sh` (detección de manifiesto y ramas de checks), `AGENTS.md` §2.6, R4, R6
 - ADR-008 (ciclo completo), ADR-007 (`scripts/` y rol maintainer)
+- **ADR-012** (un nivel: el repositorio), **ADR-013** (`cross`, ownership, G4), **ADR-014** (contribución)

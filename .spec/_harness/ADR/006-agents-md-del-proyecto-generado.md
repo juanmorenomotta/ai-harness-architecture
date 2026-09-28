@@ -1,11 +1,16 @@
-# ADR-006 — El `AGENTS.md` del proyecto es un artefacto generado
+# ADR-006 — El `AGENTS.md` de cada repositorio instanciado es un artefacto generado
 
-- **Fecha**: 2026-09-27
+- **Fecha**: 2026-09-27 · **Revisión**: 2026-09-28 (ámbito corregido)
 - **Estado**: `aceptada` · **Implementación**: **PENDIENTE**
 - **Decisor**: Juan Moreno (responsable del harness)
 - **Feature**: `_harness`
 - **Cierra**: decisión abierta **A3** de `docs/propuesta-harness-instanciable.md`
 - **Tareas afectadas**: `AGENTS.md` (partición ley/parámetros), `instanciar-harness` (nuevo), `AGENTS.md` §4
+
+> **Nota de revisión (2026-09-28)**: este ADR hablaba del «`AGENTS.md` **del proyecto**». Con ADR-012
+> (un solo nivel de instanciación) ese ámbito se corrige a **«del repositorio instanciado»**: no existe
+> un nivel «proyecto», y cada repositorio —sea un componente o el propio harness— tiene el suyo.
+> La decisión de fondo (se **genera**, no se copia) no cambia.
 
 ## Contexto
 
@@ -24,8 +29,8 @@ en un proyecto multi-componente las rutas dependen del stack, así que no pueden
 
 ## Decisión
 
-**El `AGENTS.md` de un proyecto se GENERA desde (ley base versionada + parámetros del proyecto), y se
-marca como no editable.**
+**El `AGENTS.md` de cada repositorio instanciado se GENERA desde (ley base versionada + parámetros de
+ese repositorio), y se marca como no editable.**
 
 | Contenido | Dónde vive | Naturaleza |
 | :--- | :--- | :--- |

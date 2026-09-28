@@ -60,11 +60,18 @@ comprueba** la coherencia entre ellas.
 
 | Nivel | Qué es | Responsable de | Cambia |
 | :--- | :--- | :--- | :--- |
-| **1. Harness** | **Cómo** se trabaja: roles, skills, políticas, ley, gates | Definición agnóstica de proyecto y de tecnología | Rara vez, con semver |
-| **2. Proyecto** | **Qué** se construye: alcance, stack, contratos | El repo del proyecto | Por aplicación |
-| **3. Componente** | **Con qué**: backend, frontend, móvil, datos | Templates maduros (**uno por componente**) | Por tecnología |
+| **1. Harness** | **Cómo** se trabaja: roles, skills, políticas, ley, gates | Definición agnóstica de componente y de tecnología | Rara vez, con semver |
+| **3. Repositorio** | **Qué** se construye **y** con qué: el componente o el harness mismo | Un repo por unidad de mantenimiento | Por componente |
 
-El nivel 1 se **instancia** en el nivel 2; el nivel 2 **materializa** el nivel 3.
+> **Revisión 2026-09-28 (ADR-012)**: el «nivel 2 — Proyecto» **se elimina**. Era un contenedor
+> inventado para ubicar el contrato; en el escenario real los componentes **no se relacionan entre sí**
+> y no hay alcance de aplicación. Existe **un solo nivel de instanciación: el repositorio**, que
+> contiene todo lo necesario para su mantenimiento (ley, método, gate, `.spec/` y versión del harness).
+> El contrato es **propiedad del componente proveedor** y el consumidor lo referencia **con pin**.
+>
+> Ver **ADR-012** para el detalle y las consecuencias.
+
+El nivel 1 se **instancia** en un repositorio. Esa es la única relación jerárquica.
 
 ### El patrón se aplica por tercera vez
 

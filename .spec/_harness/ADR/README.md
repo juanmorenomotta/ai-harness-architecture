@@ -16,6 +16,9 @@ cambia, se escribe uno nuevo y el anterior pasa a `reemplazada por ADR-NNN`.
 | [009](./009-primera-aplicacion-auth-laravel.md) | Módulo de autenticación (Laravel 12 / PHP 8.2) como primera aplicación y template | `aceptada` (impl. pendiente) | 2026-09-27 |
 | [010](./010-remoto-privado-en-github.md) | Remoto privado en GitHub para que R3 sea ejecutable | `aceptada` (impl. pendiente) | 2026-09-27 |
 | [011](./011-g3-revision-local-y-proteccion-inerte.md) | G3 es revisión humana local; la protección de rama queda inerte y declarada | `aceptada` (impl. pendiente) | 2026-09-27 |
+| [012](./012-un-nivel-el-repositorio.md) | **Un solo nivel de instanciación**: el repositorio es la unidad de mantenimiento | `aceptada` (impl. pendiente) | 2026-09-28 |
+| [013](./013-componentes-cross-ownership-y-gates.md) | Componentes **cross**: ownership declarado, contrato versionado y gate **G4** | `aceptada` (impl. pendiente) | 2026-09-28 |
+| [014](./014-contribucion-externa-y-g4.md) | Contribución externa: `contrib/<change-id>` y la regla del «mismo humano en dos sombreros» | `aceptada` (impl. pendiente) | 2026-09-28 |
 
 > Los ADR 004–010 responden a las decisiones abiertas **A1–A7** de
 > [`docs/propuesta-harness-instanciable.md`](../../../docs/propuesta-harness-instanciable.md).
