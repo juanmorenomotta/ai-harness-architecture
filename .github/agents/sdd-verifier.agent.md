@@ -1,7 +1,7 @@
 ---
 description: "Verifica de forma independiente que una tarea cumple su criterio de aceptación. Use when checking a completed task, validating acceptance criteria, reviewing a diff, producing verify.md, or deciding PASS/FAIL before a PR."
 model: "DeepSeek V4 Flash (deepseek)"
-tools: ['read', 'search', 'execute', 'todo']
+tools: ['read', 'edit', 'search', 'execute', 'todo']
 reasoning-effort: "high"
 ---
 <!-- GENERADO por scripts/sync-adapters.sh — NO EDITAR A MANO.

@@ -1,7 +1,7 @@
 ---
 description: "Transforma scope.md en diseño técnico y plan de tareas atómicas. Use when converting an approved scope into design.md, architecture decisions, interfaces, or task decomposition."
 model: "GPT-5.6 Terra (openai)"
-tools: ['read', 'search', 'todo']
+tools: ['read', 'edit', 'search', 'todo']
 reasoning-effort: "high"
 ---
 <!-- GENERADO por scripts/sync-adapters.sh — NO EDITAR A MANO.

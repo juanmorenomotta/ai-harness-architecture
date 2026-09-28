@@ -66,6 +66,14 @@ ORCHESTRATOR_SKILL = "sdd-orchestrator"
 # procedimental de los roles, no la documentación sobre modelos.
 MODEL_SCOPED_SKILLS = {"model-switching"}
 
+# Roles que NO producen artefactos propios: entregan su informe a otro rol.
+# Se eximen del check de `edit` porque escribir no es su trabajo, no por olvido.
+ROLES_WITHOUT_OWN_ARTIFACT = {"sdd-security-reviewer"}
+
+# Roles que NO producen artefactos propios: entregan su informe a otro rol.
+# Se exime del check de `edit` porque escribir no es su trabajo, no por olvido.
+ROLES_WITHOUT_OWN_ARTIFACT = {"sdd-security-reviewer"}
+
 EXPECTED_ROLES = [
     "sdd-init",
     "sdd-tech-lead",
@@ -381,7 +389,15 @@ def check_layer_separation(report: Report, allowed_aliases: set[str]) -> None:
 
 
 def check_permissions(report: Report, permissions: dict) -> None:
-    """Políticas de permisos presentes y con la restricción clave del Verifier."""
+    """Políticas de permisos presentes y con la restricción clave del Verifier.
+
+    El Verifier SÍ necesita `edit`: es la tool de escritura y debe redactar `verify.md`.
+    Lo que preserva su independencia es que `writable_paths` lo limite a ese ÚNICO
+    artefacto, de modo que no pueda tocar el código que verifica.
+
+    Antes este check exigía lo contrario ("no puede tener 'edit'"), lo que hacía al
+    Verifier incapaz de producir su artefacto. Corregido el 2026-09-28.
+    """
     pol_roles = permissions.get("roles") or {}
     for role in EXPECTED_ROLES:
         report.tick()
@@ -393,14 +409,23 @@ def check_permissions(report: Report, permissions: dict) -> None:
         return
 
     report.tick()
-    if "edit" in (verifier_policy.get("allow") or []):
-        report.error("'sdd-verifier' no puede tener 'edit' permitido: destruye la independencia")
-
     writable = verifier_policy.get("writable_paths") or []
-    if isinstance(writable, list):
-        for path in writable:
-            if "verify.md" not in str(path):
-                report.warn(f"'sdd-verifier' escribe '{path}'; se espera solo verify.md")
+    if not isinstance(writable, list):
+        return
+
+    if not writable:
+        report.error(
+            "'sdd-verifier' no declara `writable_paths`: sin escritura acotada a verify.md "
+            "no puede producir su artefacto"
+        )
+        return
+
+    outside = [str(p) for p in writable if "verify.md" not in str(p)]
+    if outside:
+        report.error(
+            "'sdd-verifier' declara rutas de escritura fuera de verify.md: "
+            f"{', '.join(outside)}. Escribir código destruye la independencia"
+        )
 
 
 def check_law_rules(report: Report) -> None:
@@ -536,6 +561,71 @@ def _check_single_skill(report: Report, skill_file: Path) -> None:
         )
 
 
+def check_role_tools_consistency(report: Report, permissions: dict) -> None:
+    """Un rol DEBE poder escribir el artefacto que declara producir.
+
+    Defecto real detectado el 2026-09-28: `sdd-init`, `sdd-tech-lead` y `sdd-verifier`
+    declaraban un `outputs` (scope.md, design.md, verify.md) pero tenian `edit` en `deny`
+    y no en `tools`, asi que NO podian escribir su propio artefacto. Las fases init,
+    design y verify eran inejecutables, y nada lo comprobaba.
+
+    La causa: se uso `edit` (la tool de escritura) para expresar "no editar CODIGO",
+    una restriccion que `writable_paths` ya expresa. La tool es la capacidad; la lista
+    de rutas es el limite.
+    """
+    agents_dir = ROOT / AGENTS_DIR
+    if not agents_dir.exists():
+        return
+
+    pol_roles = permissions.get("roles") or {}
+
+    for prompt in sorted(agents_dir.glob("*.md")):
+        fm = frontmatter(prompt)
+        role = prompt.stem
+        outputs = fm.get("outputs")
+        if not outputs:
+            continue  # un rol sin artefacto propio no necesita escribir
+
+        report.tick()
+        tools = fm.get("tools") if isinstance(fm.get("tools"), list) else []
+        tools = [str(t) for t in tools]
+        if role in ROLES_WITHOUT_OWN_ARTIFACT:
+            if "edit" in tools:
+                report.warn(
+                    f"{prompt.relative_to(ROOT)}: rol de solo informe, pero declara la tool `edit`. "
+                    "Si no escribe artefactos propios, no la necesita"
+                )
+            continue
+        if "edit" not in tools:
+            report.error(
+                f"{prompt.relative_to(ROOT)}: declara `outputs` ({', '.join(str(o) for o in outputs)})"
+                " pero su lista `tools` no incluye `edit`: NO puede escribir su propio artefacto. "
+                "La restriccion de donde escribe la impone `writable_paths`, no la ausencia de la tool"
+            )
+
+        policy = pol_roles.get(role)
+        if not isinstance(policy, dict):
+            continue
+
+        report.tick()
+        allow = [str(t) for t in (policy.get("allow") or [])]
+        deny = [str(t) for t in (policy.get("deny") or [])]
+        writable = policy.get("writable_paths") or []
+
+        if "edit" not in allow and writable:
+            report.error(
+                f"'{role}': declara `writable_paths` ({', '.join(str(w) for w in writable)})"
+                " pero no tiene `edit` en su lista `allow`: la politica y el contrato se contradicen"
+            )
+
+        if "edit" in deny and writable:
+            report.error(
+                f"'{role}': `deny` incluye `edit` y a la vez declara `writable_paths`. "
+                "Contradiccion: no puede escribir nada de lo que declara. "
+                "Usa `writable_paths` para acotar el alcance, no `deny: edit`"
+            )
+
+
 def copilot_name_map(alias_block: dict) -> set[str]:
     """Nombres de modelo válidos en el selector de Copilot (valores del model_map)."""
     copilot = alias_block.get("copilot") if isinstance(alias_block, dict) else None
@@ -669,6 +759,7 @@ def validate(report: Report) -> None:
     check_role_provider_pairs(report, roles_cfg, models)
     check_layer_separation(report, allowed_aliases)
     check_permissions(report, permissions)
+    check_role_tools_consistency(report, permissions)
     check_law_rules(report)
     check_skills_referenced(report)
     check_adapters_synced(report, roles_cfg, alias_block)

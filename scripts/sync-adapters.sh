@@ -371,15 +371,21 @@ copilot_model_for() {
   ' "$ROUTING" 2>/dev/null
 }
 
+# Tools por rol para el frontmatter de Copilot.
+# REGLA: un rol DEBE tener la tool que necesita para escribir su propio artefacto.
+# `edit` NO es "editar código": es la tool de escritura de archivos, y `writable_paths`
+# (en .agents/policies/permissions.yaml) es quien limita DÓNDE puede escribir.
+# Denegar `edit` a un rol que declara un `output` lo deja incapaz de producir su artefacto.
+# Verificado por el check `check_role_tools_consistency` de scripts/validate_harness.py.
 copilot_tools_for() {
   case "$1" in
-    sdd-init|sdd-tech-lead|sdd-security-reviewer) echo "['read', 'search', 'todo']" ;;
-    sdd-verifier)                                 echo "['read', 'search', 'execute', 'todo']" ;;
+    sdd-init|sdd-tech-lead)                       echo "['read', 'edit', 'search', 'todo']" ;;
+    sdd-security-reviewer)                        echo "['read', 'search', 'todo']" ;;
+    sdd-verifier)                                 echo "['read', 'edit', 'search', 'execute', 'todo']" ;;
     sdd-developer)                                echo "['read', 'search', 'edit', 'execute', 'todo']" ;;
     *)                                            echo "['read', 'search']" ;;
   esac
 }
-
 for role in $ROLES; do
   # Para el frontmatter hay que resolver el id limpio -> nombre del selector.
   raw_model="$(model_id_for "$role")"

@@ -17,23 +17,19 @@ roles:
   sdd-init:
     allow:
       - read
+      - edit             # escribe SU artefacto: .spec/**/scope.md (writable_paths)
       - search
       - todo
-    deny:
-      - edit
-      - execute          # Init no ejecuta nada: solo lee y escribe spec
+    # `writable_paths` es el control real: `edit` es la tool, la ruta la limita la lista.
     writable_paths:
       - ".spec/**/scope.md"
 
   sdd-tech-lead:
     allow:
       - read
+      - edit
       - search
       - todo
-    deny:
-      - edit
-      - execute
-    # Excepción explícita: el Tech Lead sí escribe sus artefactos de diseño.
     writable_paths:
       - ".spec/**/design.md"
       - ".spec/**/tasks/**"
@@ -67,15 +63,16 @@ roles:
   sdd-verifier:
     allow:
       - read
+      - edit             # escribe SU artefacto: .spec/**/verify.md (writable_paths)
       - search
       - execute          # necesita correr ./init.sh y los tests
       - todo
     deny:
-      - edit
       - agent
     writable_paths:
       - ".spec/**/verify.md"
     notes:
+      - "`edit` existe SOLO para escribir verify.md: el resto de rutas las bloquea writable_paths."
       - "El Verifier NO edita código: si algo falla, escribe FAIL y devuelve la tarea."
 
   sdd-security-reviewer:

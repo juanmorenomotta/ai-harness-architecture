@@ -8,6 +8,7 @@ skills:
   - adr-record
 tools:
   - read
+  - edit
   - search
   - todo
 outputs:

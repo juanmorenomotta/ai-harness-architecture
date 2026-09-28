@@ -7,6 +7,7 @@ skills:
   - spec-authoring
 tools:
   - read
+  - edit
   - search
   - todo
 outputs:
@@ -50,6 +51,8 @@ escribes código.
 - **NO** descompones en tareas. Eso es del Tech Lead.
 - **NO** escribes código ni ejecutas comandos.
 - Solo puedes escribir `.spec/<slug>/scope.md`.
+- **NO** escribes código: tu tool `edit` existe **solo** para redactar `scope.md`. Esa es la única ruta
+  que `writable_paths` te autoriza.
 
 ## Salida (resumen de ≤ 10 líneas)
 
