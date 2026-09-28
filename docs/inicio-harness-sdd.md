@@ -3,9 +3,13 @@
 > **Documento de arranque.** Léelo al retomar el trabajo después de un parón. Contiene el estado
 > exacto, qué está decidido, qué está bloqueado y cuál es el siguiente paso concreto.
 >
-> **Última actualización**: 2026-09-27 · **Sesión cerrada en**: commit `631ce94`
-> **Estado global**: 10 ADR aceptados · harness coherente (85 checks) · gate en PASS ·
-> remoto GitHub **creado y sincronizado** · **0 aplicaciones construidas**
+> **Última actualización**: 2026-09-28 · **Sesión cerrada en**: commit `eb9b60e`
+> **Estado global**: **14 ADR** aceptados · harness coherente (**94 checks**) · gate en PASS ·
+> remoto GitHub **creado** (2 commits por subir) · **0 componentes construidos**
+>
+> **Modelo vigente (ADR-012)**: **un solo nivel de instanciación — el repositorio.** Cada repo
+> instanciado es autosuficiente: ley + método + gate + `.spec/` + versión del harness. El contrato es
+> **propiedad del proveedor**; el consumidor lo referencia **con pin**.
 
 ---
 
@@ -21,13 +25,12 @@ ningún `tasks/` y ningún `verify.md`. El siguiente hito es **la primera aplica
 
 | Comprobación | Resultado |
 | :--- | :--- |
-| Rama | `main` — commits `6b9052c` → `5332e3b` |
-| Último commit | `5332e3b docs: corregir D2 (sin herencia) y el paso 5 segun ADR-005` |
-| Remoto git | **`origin` → `github.com/juanmorenomotta/ai-harness-architecture`** (privado), **sincronizado** (0 ahead / 0 behind) |
+| Rama | `main` — último commit `eb9b60e` |
+| Remoto git | **`origin` → `github.com/juanmorenomotta/ai-harness-architecture`** (privado). **2 commits por subir** |
 | Protección de `main` | **Creada pero INERTE** (repo privado + plan Free). Ver §4, hueco 2 |
-| `python scripts/validate_harness.py` | **85 comprobaciones, COHERENTE** (exit 0) |
+| `python scripts/validate_harness.py` | **94 comprobaciones, COHERENTE** (exit 0) |
 | `bash init.sh` | **PASS** (con `lint`/`format`/`typecheck`/`tests` en **SKIP**) |
-| ADRs | 10 (001–010), todos `aceptada`; 004–010 con **implementación pendiente** |
+| ADRs | **14** (001–014), todos `aceptada`; 004–014 con **implementación pendiente** |
 | Sin commitear | `.spec/validator-runner/`, `docs/desacoplamiento-arquitectura-software.md` (previos, deliberadamente fuera) |
 
 ### Herramientas del entorno
@@ -44,20 +47,21 @@ ningún `tasks/` y ningún `verify.md`. El siguiente hito es **la primera aplica
 
 ---
 
-## 3. Lo que está decidido (ADR-004 a ADR-010)
-
-Respuesta a las decisiones abiertas **A1–A7** de `docs/propuesta-harness-instanciable.md`:
+## 3. Lo que está decidido (ADR-004 a ADR-014)
 
 | ADR | Decisión | Consecuencia práctica |
 | :--- | :--- | :--- |
 | **004** | Versión única en `.harness/harness.version` + check que **falla si diverge** | Habilita fijar la versión del harness al instanciar |
-| **005** | **Un solo harness base**; especialización en el nivel 3. **Sin herencia, sin perfiles** | Elimina trabajo: no hay mecanismo que construir |
-| **006** | El `AGENTS.md` del proyecto es **generado** (ley + parámetros) | Corrige que §4 de la ley describa `src/`; check de sincronización |
-| **007** | Rol nuevo **`harness-maintainer`**; `scripts/` cerrado al Developer | Desbloquea `validator-runner` **y** el materializador de stack |
+| **005** | **Un solo harness base**; especialización en el nivel del componente. **Sin herencia, sin perfiles** | Elimina trabajo: no hay mecanismo que construir |
+| **006** | El `AGENTS.md` de **cada repo instanciado** es **generado** (ley + parámetros) | Corrige que §4 de la ley describa `src/`; check de sincronización |
+| **007** | Rol nuevo **`harness-maintainer`**; `scripts/` cerrado al Developer | Desbloquea `validator-runner` **y** el materializador |
 | **008** | Ciclo SDD **completo para toda aplicación**, sin umbral de tamaño | Frontera por **naturaleza**, no por tamaño (verificable, R5) |
-| **009** | Primera aplicación: **auth (correo + contraseña)**, **dos componentes**: backend **Laravel 12 / PHP 8.2** y frontend **Vue** | Ver §5: tiene un **bloqueo** |
+| **009** | Primer componente: **`auth-service`**, clase **`cross`**, Laravel 12 / PHP 8.2 + consumidor frontend Vue | Ver §5: tiene un **bloqueo** |
 | **010** | **Remoto privado en GitHub** | Habilita R3 y G3 |
 | **011** | **G3 es revisión humana LOCAL**; la protección de rama es **inerte** | Ver §4: R3 no es control técnico |
+| **012** | **Un solo nivel de instanciación: el repositorio.** Se elimina el «nivel proyecto» | Contrato = propiedad del proveedor; consumidor con **pin**. `.spec/` siempre en el repo que lo contiene |
+| **013** | Clase **`cross`**: componentes consumidos por terceros | `ownership` declarado + `CODEOWNERS` + contrato versionado + gate **G4** |
+| **014** | **Contribución externa**: rama `contrib/<change-id>` y PR al owner | Regla del «mismo humano en dos sombreros»: se **declara** en `verify.md` |
 
 Los ADR están en `.spec/_harness/ADR/` y el índice en `ADR/README.md`.
 
@@ -211,18 +215,217 @@ implementación**. Comparación con el caso real:
 
 El segundo es verificable en cualquier stack (**R5**), el primero muere si cambia el backend.
 
-**Además, el contrato debe definirse en `design.md` ANTES de materializar**: backend y frontend son
-repos independientes que solo hablan por contrato. Si se materializa el backend primero, el contrato
-se descubre tarde y el frontend queda desalineado.
-
 **Matiz legítimo**: para escribir la rama PHP del gate sí hace falta ver un proyecto Laravel real.
 Eso es un **spike** (desechable, para aprender el terreno), no implementación (permanente, va contra
-`tasks/`). Y en este caso hay simbiosis: **el primer proyecto CREA el template**, así que nace de
+`tasks/`). Y en este caso hay simbiosis: **el primer componente CREA el template**, así que nace de
 criterios bien pensados.
+
+### Estructura de repositorios (ADR-012: un solo nivel)
+
+**No hay nivel «proyecto».** Cada repositorio es autosuficiente y contiene todo lo necesario para su
+mantenimiento por cualquier actor:
+
+```
+auth-service/                  ← repo 1 (clase cross)
+  AGENTS.md .harness/ .agents/ init.sh
+  api/openapi.yaml             ← EL CONTRATO: es suyo, lo versiona
+  .spec/<feature>/             ← scope, design, tasks, verify
+  src/
+
+web-portal/                    ← repo 2 (consumidor)
+  AGENTS.md .harness/ .agents/ init.sh
+  .spec/<feature>/             ← su propia spec de integración
+  src/
+  → consume auth-service v1.3.0 CON PIN (no copia el contrato)
+```
 
 ---
 
-## 7. Cómo retomar (para el agente que lea esto)
+## 7. GUÍA PASO A PASO — ejecutar el flujo tú mismo
+
+Esta es la guía operativa. Cada paso indica **quién** lo hace y **cómo saber que salió bien**. Los
+pasos con 👤 son tuyos y no los puede hacer un agente (gates humanos y operaciones de GitHub).
+
+### Fase 0 — Preparar la rama de trabajo y subir lo pendiente
+
+👤 **Paso 0.1 — Subir los commits pendientes.** El harness tiene 2 commits locales sin subir:
+```bash
+git push origin main
+```
+✅ Verificar: `git status` dice «up to date with origin/main».
+
+👤 **Paso 0.2 — Crear la rama de la feature.** El flujo trabaja en rama, nunca en `main` (R2):
+```bash
+git checkout -b spec/auth-service
+```
+✅ Verificar: `git branch --show-current` → `spec/auth-service`.
+
+> **Por qué una rama y no `main`:** el commit de `scope.md` es un commit más, y R2 exige que cada
+> commit corresponda a una unidad de trabajo. Trabajar en rama permite además que G3 (revisión
+> humana) revise el conjunto antes de integrarlo.
+
+---
+
+### Fase 1 — `sdd-init` → `scope.md` (QUÉ, sin tecnología)
+
+👤 **Paso 1.1 — Invocar el agente.** En VS Code:
+1. Abre el chat de Copilot: `Ctrl+Alt+I`
+2. Comprueba que el selector de modo dice **Agent** (no «Ask»)
+3. Abre el **selector de agentes** (desplegable junto al selector de modelo) y elige **`sdd-init`**
+4. Escribe el prompt **funcional, sin tecnología**:
+
+```
+Feature: auth-service. Slug: auth-service.
+
+Necesito un servicio de autenticación que otros componentes de mi organización
+puedan consumir. Funcionalidad:
+
+1. Un visitante se registra con correo y contraseña. La contraseña se valida
+   (longitud mínima y confirmación).
+2. El sistema envía un correo con un enlace para activar la cuenta. Hasta que
+   el enlace se use, la cuenta NO puede iniciar sesión.
+3. El enlace de activación caduca; debe poderse reenviar.
+4. Un usuario activado puede iniciar sesión y cerrar sesión.
+5. Un usuario puede recuperar su contraseña por correo.
+6. Es un componente consumido por terceros: su API debe poder evolucionar sin
+   romper a los consumidores ya existentes.
+```
+
+> **Lo que NO dice el prompt, a propósito**: ni Laravel, ni PHP, ni Vue, ni base de datos. La
+> tecnología se decide en `design.md`. Si la mencionas aquí, los criterios de aceptación quedan atados
+> a ella.
+
+**Qué hace el agente**: lee `AGENTS.md`, carga la skill `spec-authoring`, y escribe
+`.spec/auth-service/scope.md`. Después **se detiene solo**.
+
+✅ **Verificar**: existe `.spec/auth-service/scope.md` y contiene criterios `AC-N` verificables.
+
+---
+
+### Fase 2 — 👤 GATE G1: aprobar el alcance
+
+👤 **Paso 2.1 — Leer y juzgar `.spec/auth-service/scope.md`.** Comprueba:
+- Cada `AC-N` es **verificable por comando u observación binaria** (R5).
+- Hay **no-objetivos** (mínimo 3).
+- Los supuestos **abiertos** están marcados como `ABIERTO`.
+
+👤 **Paso 2.2 — Aprobar.** Edita el archivo y escribe **tú** (ningún agente lo rellena):
+```markdown
+- **Estado**: `aprobado`
+- **Aprobado por**: Juan Moreno - 2026-09-28
+```
+
+👤 **Paso 2.3 — Commit del alcance**:
+```bash
+git add .spec/auth-service/scope.md
+git commit -m "spec(auth-service): scope aprobado (G1)"
+```
+
+> **Si algo no te convence**: no apruebes. Pide cambios al agente `sdd-init` en el mismo chat. Un G1
+> aprobado sobre un alcance malo contamina todo lo que viene después.
+
+---
+
+### Fase 3 — `sdd-tech-lead` → `design.md` + `tasks/`
+
+👤 **Paso 3.1 — Invocar el agente.** Selector de agentes → **`sdd-tech-lead`**:
+```
+Procesa el alcance de `.spec/auth-service/scope.md`. Ya está aprobado (G1).
+```
+
+**Qué produce**: `design.md` (arquitectura, interfaces, **contrato**, alternativas descartadas,
+justificación de dependencias), `tasks/NNN-*.md` (una tarea atómica por archivo) y ADRs si hay
+decisiones relevantes.
+
+✅ **Verificar**: existen `design.md` y `tasks/001-*.md`.
+
+---
+
+### Fase 4 — 👤 GATE G2: aprobar diseño y plan
+
+👤 **Paso 4.1 — Revisar** que el diseño incluye: interfaces con contratos explícitos, **al menos una
+alternativa descartada**, dependencias justificadas, y una estrategia de test.
+
+👤 **Paso 4.2 — Revisar las tareas**: cada una con `## Objetivo`, `## Archivos` (lista cerrada),
+`## Criterio de aceptación` y `## Dependencias`. Una tarea de tipo «L» hay que partirla.
+
+👤 **Paso 4.3 — Aprobar** en `design.md`, commit:
+```bash
+git add .spec/auth-service/
+git commit -m "spec(auth-service): diseno y plan aprobados (G2)"
+```
+
+---
+
+### Fase 5 — `sdd-developer` → código, una tarea por commit
+
+👤 **Paso 5.1 — Invocar el agente por CADA tarea.** Selector → **`sdd-developer`**:
+```
+Implementa la tarea 001 de `.spec/auth-service/tasks/`. El plan está aprobado (G2).
+```
+
+**Qué hace**: crea la rama `task/auth-service/001`, escribe el test que falla, implementa, ejecuta
+`./init.sh`, y hace **un** commit `sdd: task 001 - ...`.
+
+✅ **Verificar tras cada tarea**:
+```bash
+git log --oneline -1        # debe decir: sdd: task NNN - ...
+git diff --stat HEAD~1      # solo archivos de la lista ## Archivos de esa tarea
+```
+
+👤 **Paso 5.2 — Repetir** para cada tarea: 002, 003, … Avanzar de tarea **una a una**.
+
+> ⚠️ **Hoy el gate dirá PASS sin comprobar PHP** (hueco 1 de §4): los checks saldrán en `SKIP`. Las
+> tareas se implementan igual, pero la verificación real llega en la fase 7.
+
+---
+
+### Fase 6 — `sdd-verifier` → `verify.md`
+
+👤 **Paso 6.1 — Invocar el agente.** Selector → **`sdd-verifier`**:
+```
+Verifica las tareas commiteadas de la feature `auth-service`.
+Escribe `.spec/auth-service/verify.md` con la salida literal de ./init.sh.
+```
+
+**Qué produce**: `verify.md` con trazabilidad AC↔código, salida **literal** del gate, y veredicto
+`PASS` / `PASS-CON-NOTAS` / `FAIL`.
+
+**Esperado en el estado actual**: reportará los checks del gate como **no verificados** (`SKIP`) y
+R3 como **no verificable técnicamente**. Eso es **correcto**: es deuda anotada, no un fallo.
+
+---
+
+### Fase 7 — 👤 GATE G3 y cierre
+
+👤 **Paso 7.1 — Revisar `verify.md`** y el diff completo. Comprobar que las deudas están declaradas y
+no ocultas.
+
+👤 **Paso 7.2 — Aprobar y mergear** a `main`:
+```bash
+git checkout main
+git merge --no-ff spec/auth-service -m "feat(auth-service): modulo de autenticacion verificado"
+git push origin main
+```
+
+👤 **Paso 7.3 — Subir el componente a su propio repositorio remoto** (paso futuro: `auth-service`
+será un repo independiente, ADR-012).
+
+---
+
+### Resumen del ciclo
+
+| Fase | Rol | Artefacto | Gate |
+| :--- | :--- | :--- | :--- |
+| 1 | `sdd-init` | `scope.md` | → **G1** 👤 |
+| 3 | `sdd-tech-lead` | `design.md` + `tasks/` | → **G2** 👤 |
+| 5 | `sdd-developer` | código + 1 commit por tarea | — |
+| 6 | `sdd-verifier` | `verify.md` | → **G3** 👤 |
+| 7 | — | merge a `main` | **G4** 👤 si es `cross` |
+
+---
+
+## 8. Cómo retomar (para el agente que lea esto)
 
 1. **Leer `AGENTS.md` completo** (precondición obligatoria, §6). Es la ley y prevalece sobre todo.
 2. **Leer este documento** para el estado y el punto de continuación.
@@ -233,7 +436,7 @@ criterios bien pensados.
    python scripts/validate_harness.py
    bash init.sh
    ```
-4. **No rellenar ningún `Aprobado por:`.** Los gates G1/G2/G3 los aprueba un humano (§7).
+4. **No rellenar ningún `Aprobado por:`.** Los gates G1/G2/G3/G4 los aprueba un humano (§7).
 5. **No tocar `AGENTS.md`, `.harness/**`, `.agents/**`, `init.sh`, `harness.config.json`** (R4).
    Todo eso va por PR separada con aprobación humana.
 
@@ -251,7 +454,7 @@ criterios bien pensados.
 
 ---
 
-## 8. Trampas conocidas (evitar repetir errores ya cometidos)
+## 9. Trampas conocidas (evitar repetir errores ya cometidos)
 
 Van **cuatro ocurrencias** del mismo fallo en este repositorio: **un dato crítico en copias que
 divergen en silencio**.
@@ -279,7 +482,7 @@ divergen en silencio**.
 
 ---
 
-## 9. Documentos de referencia
+## 10. Documentos de referencia
 
 | Documento | Contenido |
 | :--- | :--- |
@@ -292,7 +495,7 @@ divergen en silencio**.
 
 ---
 
-## 10. Orden de implementación (visión completa)
+## 11. Orden de implementación (visión completa)
 
 | Paso | Qué | Estado |
 | :--- | :--- | :--- |
@@ -311,7 +514,7 @@ divergen en silencio**.
 
 ---
 
-## 11. Siguiente acción concreta
+## 12. Siguiente acción concreta
 
 ```
 1. [HECHO] Remoto privado creado, main sincronizado y proteccion creada (inerte, ADR-011)
@@ -327,7 +530,7 @@ Ese es el punto exacto de continuación. Todo lo anterior está en disco y verif
 
 ---
 
-## 12. Guía: crear el repositorio en GitHub
+## 13. Guía: crear el repositorio en GitHub
 
 Operación **humana**, sin agentes. No hay que pegar ninguna credencial en el repo (R9).
 
