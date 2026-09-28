@@ -3,6 +3,9 @@
 > **Documento de arranque.** Léelo al retomar el trabajo después de un parón. Contiene el estado
 > exacto, qué está decidido, qué está bloqueado y cuál es el siguiente paso concreto.
 >
+> **Lista concreta de pendientes**: [`docs/pendientes.md`](./pendientes.md) — ayuda memoria de traspaso
+> con los 4 bloqueos, los 13 pendientes menores y las decisiones abiertas.
+>
 > **Última actualización**: 2026-09-28 · **Sesión cerrada en**: commit `eb9b60e`
 > **Estado global**: **14 ADR** aceptados · harness coherente (**94 checks**) · gate en PASS ·
 > remoto GitHub **creado** (2 commits por subir) · **0 componentes construidos**
@@ -556,11 +559,11 @@ divergen en silencio**.
 | Documento | Contenido |
 | :--- | :--- |
 | [`AGENTS.md`](../AGENTS.md) | **La ley.** R1–R10, gates G1–G3, estándares, Definition of Done |
-| [`docs/propuesta-harness-instanciable.md`](./propuesta-harness-instanciable.md) | Modelo de **tres niveles**, decisiones D1–D3, decisiones abiertas A1–A7, anexos A3/A4 |
-| [`docs/desacoplamiento-arquitectura-software.md`](./desacoplamiento-arquitectura-software.md) | Diseño del **nivel 3**: `stack.md`, `template.yaml`, `agent_profile.md` |
-| [`.spec/_harness/ADR/README.md`](../.spec/_harness/ADR/README.md) | Índice de los 10 ADR |
-| [`README.md`](../README.md) | Estado del harness y diagnóstico de las 9 dimensiones |
-| `.spec/validator-runner/scope.md` | Feature **varada**: es una automatización de `scripts/`, no una feature de dominio (reclasificar como chore) |
+| [`docs/pendientes.md`](./pendientes.md) | **Ayuda memoria de traspaso**: los 4 bloqueos, pendientes menores y decisiones abiertas |
+| [`docs/propuesta-harness-instanciable.md`](./propuesta-harness-instanciable.md) | Modelo de instanciación, decisiones D1–D3, abiertas A1–A7, anexos A3/A4 |
+| [`docs/desacoplamiento-arquitectura-software.md`](./desacoplamiento-arquitectura-software.md) | Diseño del eje de stack: `stack.md`, `template.yaml`, `agent_profile.md` |
+| [`.spec/_harness/ADR/README.md`](../.spec/_harness/ADR/README.md) | Índice de los **14 ADR** |
+| [`.spec/validator-runner/scope.md`](../.spec/validator-runner/scope.md) | Feature **varada**: reclasificar como chore (5 supuestos ABIERTOS) |
 
 ---
 
