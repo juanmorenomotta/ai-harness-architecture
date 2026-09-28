@@ -3,9 +3,9 @@
 > **Documento de arranque.** Léelo al retomar el trabajo después de un parón. Contiene el estado
 > exacto, qué está decidido, qué está bloqueado y cuál es el siguiente paso concreto.
 >
-> **Última actualización**: 2026-09-27 · **Sesión cerrada en**: commit `5332e3b`
+> **Última actualización**: 2026-09-27 · **Sesión cerrada en**: commit `631ce94`
 > **Estado global**: 10 ADR aceptados · harness coherente (85 checks) · gate en PASS ·
-> **0 aplicaciones construidas**
+> remoto GitHub **creado y sincronizado** · **0 aplicaciones construidas**
 
 ---
 
@@ -23,7 +23,8 @@ ningún `tasks/` y ningún `verify.md`. El siguiente hito es **la primera aplica
 | :--- | :--- |
 | Rama | `main` — commits `6b9052c` → `5332e3b` |
 | Último commit | `5332e3b docs: corregir D2 (sin herencia) y el paso 5 segun ADR-005` |
-| Remoto git | **NINGUNO** (`git remote -v` vacío) → **R3 y G3 no son ejecutables** |
+| Remoto git | **`origin` → `github.com/juanmorenomotta/ai-harness-architecture`** (privado), **sincronizado** en `631ce94` (0 ahead / 0 behind) |
+| Protección de `main` | **Verificar en la web**: Settings → Branches (R3/G3 dependen de ella) |
 | `python scripts/validate_harness.py` | **85 comprobaciones, COHERENTE** (exit 0) |
 | `bash init.sh` | **PASS** (con `lint`/`format`/`typecheck`/`tests` en **SKIP**) |
 | ADRs | 10 (001–010), todos `aceptada`; 004–010 con **implementación pendiente** |
@@ -123,11 +124,11 @@ Consecuencia asumida: **las tareas se implementan con el gate en SKIP** durante 
 queda registrada en ADR-009 y **el template NO se declara «estándar» hasta que el gate verifique de
 verdad.**
 
-### Dos decisiones menores pendientes
+### Decisiones menores: ambas resueltas
 
-| # | Pregunta | Nota |
+| # | Pregunta | Estado |
 | :--- | :--- | :--- |
-| 1 | ¿Creas el **remoto privado** de ADR-010? | ~5 min, operación manual tuya. Guía en §12. Sin él, G3 no cierra |
+| 1 | ¿Creas el **remoto privado** de ADR-010? | **HECHO**: `origin` configurado y `main` sincronizado. Falta **verificar la protección de rama** en la web |
 | 2 | ~~¿Co-firma de ADR-007?~~ | **RESUELTO**: Juan Moreno es el Tech Lead humano → co-firmado |
 
 ---
@@ -276,7 +277,7 @@ check, **probarlo con un fixture que deba fallar** y confirmar el código 1 ante
 | Paso | Qué | Estado |
 | :--- | :--- | :--- |
 | **0** | Reclasificar `validator-runner` como **chore** de harness | Pendiente |
-| **1** | **Activar el gate**: rama PHP en `init.sh` + remoto git | **Bloquea la verificación real** |
+| **1** | **Activar el gate**: rama PHP en `init.sh` (el **remoto git ya está hecho**) | **Bloquea la verificación real** |
 | **2** | **Versión única del harness** (ADR-004) | Decidido, sin implementar |
 | **3** | **`instanciar-harness`** (ADR-006) | Decidido, sin implementar |
 | **4** | **Primera aplicación**: auth Laravel 12 → **AQUÍ ESTAMOS** | Listo para arrancar |
@@ -292,7 +293,7 @@ check, **probarlo con un fixture que deba fallar** y confirmar el código 1 ante
 ## 11. Siguiente acción concreta
 
 ```
-1. Crear el remoto privado en GitHub (ADR-010).                  ← TÚ, ~5 min (§12)
+1. [HECHO] Remoto privado creado y main sincronizado.            ← verificar proteccion de rama (§12 paso 6)
 2. Lanzar `sdd-init` para la feature `auth`.                     ← agente
 3. Revisar el `scope.md` y aprobar G1 escribiendo:               ← TÚ
    Aprobado por: Juan Moreno - 2026-09-XX
@@ -300,7 +301,7 @@ check, **probarlo con un fixture que deba fallar** y confirmar el código 1 ante
 
 Ese es el punto exacto de continuación. Todo lo anterior está en disco y verificado.
 
-> **Nota sobre el slug**: la feature pasa a llamarse `auth` (no `auth-laravel`), porque abarca **dos
+> **Nota sobre el slug**: la feature se llama `auth` (no `auth-laravel`), porque abarca **dos**
 > componentes** (Laravel + Vue) y el slug no debe nombrar una tecnología.
 
 ---
@@ -346,7 +347,7 @@ git log --oneline origin/main -3
 **Prohibido**: `git push --force` a `main` (R3) y subir `.env` con valores (R9). El `.gitignore` ya
 protege `.env` y solo permite `.env.harness`, que contiene **nombres** de variables.
 
-### Auditoría previa al push (hecha el 2026-09-27)
+### Auditoría previa al push (hecha el 2026-09-27; el push ya se completó)
 
 | Comprobación | Resultado |
 | :--- | :--- |
