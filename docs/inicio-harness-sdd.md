@@ -127,82 +127,97 @@ Necesario para `validator-runner` y para el materializador de nivel 3.
 
 ---
 
-## 5. Decisión pendiente de tu respuesta
+## 5. Bloqueo real para arrancar (corregido 2026-09-28)
 
-De la última conversación, quedó **una pregunta sin cerrar**: el **orden** entre arrancar el SDD y
-arreglar el gate PHP.
+Una versión anterior de esta sección decía que el único bloqueo era el **orden entre el SDD y el gate
+PHP**. Estaba incompleto: **falta una pieza entera del harness.**
 
-**Mi recomendación (opción 3, corregida):**
+### La cadena de bloqueos
 
-> **Arrancar el SDD ahora, y escribir la rama PHP del gate cuando exista el proyecto Laravel real.**
+`instanciar-harness` **no existe** (verificado: `scripts/` solo tiene `diagnose_harness.py`,
+`harness_yaml.py`, `sync-adapters.sh` y `validate_harness.py`). Y sin él **no se puede crear el
+repositorio del componente**, así que las fases del SDD no tienen dónde escribir.
 
-Razonamiento: **no se puede escribir bien la rama PHP sin ver un proyecto Laravel en disco.** No se
-sabe si Pint o PHPStan estarán en `composer.json`, ni qué devuelven, ni si Larastan necesita
-configuración. Escribirlo antes sería un gate especulativo — el mismo error de secuencia que ADR-005
-evita con los perfiles de dominio.
+```mermaid
+flowchart LR
+  A["1. Rol harness-maintainer<br/>(ADR-007) NO existe"] --> B
+  B["2. Sin rol, nadie implementa<br/>instanciar-harness"] --> C
+  C["3. Sin instanciador, no existe<br/>el repo del componente"] --> D
+  D["4. Sin componente, sdd-init<br/>no tiene dónde escribir"]
+```
 
-Consecuencia asumida: **las tareas se implementan con el gate en SKIP** durante la fase 1. La deuda
-queda registrada en ADR-009 y **el template NO se declara «estándar» hasta que el gate verifique de
-verdad.**
+| # | Bloqueo | Evidencia |
+| :--- | :--- | :--- |
+| 1 | **`harness-maintainer` no existe** | Sin `.agents/agents/harness-maintainer.md` ni entrada en `permissions.yaml` |
+| 2 | **`instanciar-harness` no existe** | `scripts/` tiene 4 archivos, ninguno es el instanciador |
+| 3 | **Sin instanciador no hay componente** | Y sin componente, `.spec/` no tiene dueño |
+| 4 | **La rama PHP del gate** | Hueco 1 de §4; necesario para la verificación real |
 
-### Decisiones menores: ambas resueltas
+**ADR-006 lo advirtió**: *«`instanciar-harness` necesita un generador y su modo `--check`. Es trabajo
+real, no un envoltorio.»*
+
+### El orden correcto (corregido)
+
+| Orden | Qué | Por qué ahí |
+| :--- | :--- | :--- |
+| **1º** | **Rol `harness-maintainer`** (ADR-007) | Sin rol, nadie puede escribir en `scripts/` |
+| **2º** | **`instanciar-harness`** (ADR-006) + versión única (ADR-004) | Es lo que crea el componente con identidad propia |
+| **3º** | **Instanciar `auth-service`** | Ya existe el repositorio del componente |
+| **4º** | **SDD del componente** (fases 1–7 de §7) | Con `.spec/` en su sitio |
+| **5º** | **Rama PHP del gate** | Cuando exista código Laravel real que verificar |
+
+> **Sobre el gate PHP**: la recomendación no cambia — escribirlo **cuando exista el proyecto Laravel**,
+> porque no se puede hacer bien sin ver un `composer.json` real. Lo que cambia es que **ya no es el
+> primer bloqueo**: antes hay que crear el componente.
+
+### Decisiones menores: resueltas
 
 | # | Pregunta | Estado |
 | :--- | :--- | :--- |
-| 1 | ¿Creas el **remoto privado** de ADR-010? | **HECHO**: `origin` configurado y `main` sincronizado en `1af713c` |
-| 2 | ~~¿Co-firma de ADR-007?~~ | **RESUELTO**: Juan Moreno es el Tech Lead humano → co-firmado |
+| 1 | ¿Remoto privado? (ADR-010) | **HECHO**: `origin` configurado, push realizado |
+| 2 | ¿Co-firma de ADR-007? | **RESUELTO**: Juan Moreno es el Tech Lead humano → co-firmado |
 | 3 | Protección de rama | **Creada e inerte** (ADR-011). Se conserva para que se active al migrar de plan |
 
 ---
 
-## 6. El plan concreto (guía de arranque)
+## 6. Alcance del primer componente y orden spec↔tecnología
 
-Me pediste una guía para el módulo de auth. **La guía correcta es el propio flujo SDD**: yo no escribo
-`scope.md` (eso es `sdd-init`), y **G1 lo apruebas tú** antes de que exista `design.md`.
+> **La guía operativa está en §7.** Esta sección solo fija **qué** se va a construir y **en qué orden**
+> se decide cada cosa.
 
-| Paso | Quién | Qué | Gate |
-| :--- | :--- | :--- | :--- |
-| **0** | **Tú** | Crear el remoto privado (ADR-010) | — |
-| **1** | `sdd-init` | `.spec/auth-laravel/scope.md` con criterios verificables y no-objetivos | **se detiene** |
-| **2** | **Tú** | Escribir `Aprobado por: Juan Moreno - <fecha>` en `scope.md` | **G1** |
-| **3** | `sdd-tech-lead` | `design.md` + `tasks/NNN-*.md` | **se detiene** |
-| **4** | **Tú** | Aprobar el plan | **G2** |
-| **5** | `sdd-developer` | Una tarea, un commit `sdd: task NNN - ...`, por cada tarea | — |
-| **6** | `harness-maintainer` / tú | Rama PHP del gate (PR de harness) | revisión humana |
-| **7** | `sdd-verifier` | `.spec/auth-laravel/verify.md` con la salida literal del gate | **G3** |
-
-**Alcance confirmado de la aplicación (A6):**
+**Alcance confirmado (A6), corregido a ADR-012/ADR-013:**
 
 | Parámetro | Valor |
 | :--- | :--- |
-| Componentes | **2**: `backend` (Laravel 12 · PHP 8.2 · Composer) y `frontend` (Vue 3 · Vite · npm) |
+| Componentes | **2 repos independientes**: `auth-service` (clase **`cross`**, Laravel 12 · PHP 8.2) y un **consumidor** frontend (Vue 3 · Vite) |
+| Dónde viven | Cada uno en **su propio repositorio**, creados **instanciando el harness**. Nunca dentro del harness |
 | Base de datos | SQLite (local, sin Docker) o MySQL de XAMPP |
 | Modo | Ciclo SDD **completo**, por componente (ADR-008) |
-| Funcionalidad | Registro con correo + contraseña + **validación de contraseña**, **activación por enlace enviado por correo**, login, logout, recuperación de contraseña |
-| Contrato | `.spec/auth/contracts/api.openapi.yaml` — **única costura** entre componentes |
+| Funcionalidad | Registro con correo + contraseña + **validación**, **activación por enlace enviado por correo**, reenvío, login, logout, recuperación |
+| Contrato | **Propiedad de `auth-service`** (`api/openapi.yaml`), versionado. El consumidor lo referencia **con pin** |
 | Implementación | **Desde cero** — sin Breeze ni Jetstream (el agente escribe el código) |
-| Objetivo | **Ejercitar las 4 fases y los 3 gates**, no cubrir requisitos de producción |
+| Objetivo | **Ejercitar las 4 fases y los 4 gates (G1–G4)**, no cubrir requisitos de producción |
 
 **Por qué auth es buen primer caso**: ejercita entrada de usuario, autorización/sesiones, migraciones
-de esquema (tabla de usuarios + tokens de activación), contraseñas y hashing, dependencias nuevas de
-Composer y npm, y **el contrato entre dos componentes**. Activa el rol `sdd-security-reviewer`, que
-**hasta hoy no se ha usado nunca**.
+de esquema (usuarios + tokens de activación), contraseñas y hashing, dependencias nuevas de Composer y
+npm, **el contrato entre dos repos** y el gate **G4** de compatibilidad. Activa el rol
+`sdd-security-reviewer`, que **hasta hoy no se ha usado nunca**.
 
 ### Orden: la especificación funcional va ANTES que la tecnología
 
-Respuesta a una duda de fondo planteada al cerrar: **primero el QUÉ `scope.md`, después el CÓMO
-`design.md`**. El harness lo tiene codificado en los roles — `sdd-init` tiene prohibido elegir
-tecnologías.
+**Primero el QUÉ (`scope.md`), después el CÓMO (`design.md`).** El harness lo tiene codificado en los
+roles — `sdd-init` tiene prohibido elegir tecnologías.
 
 ```mermaid
 flowchart TD
-  A["1. scope.md\nQUÉ y PARA QUÉ\nagnóstico de tecnología"] --> B
-  B["2. design.md\nCÓMO: arquitectura + stack + contrato"] --> C
-  C["3. stack.md\nqué templates y de qué repos"] --> D
-  D["4. Materializar\ngit clone → apps/backend, apps/frontend"] --> E
-  E["5. tasks/\ndescomposición por componente"] --> F
-  F["6. Implementar\nSOBRE el esqueleto del template"]
-  F --> G["7. verify.md"]
+  A["0. Instanciar el harness<br/>→ crea el repo del componente"] --> B
+  B["1. scope.md<br/>QUÉ y PARA QUÉ<br/>agnóstico de tecnología"] --> C
+  C["2. design.md<br/>CÓMO: arquitectura, stack, contrato"] --> D
+  D["3. tasks/<br/>descomposición en tareas atómicas"] --> E
+  E["4. Implementar<br/>una tarea, un commit"] --> F
+  F["5. verify.md<br/>evidencia contra el gate"] --> G
+  G["6. Publicar contrato + versión<br/>(si el componente es cross)"] --> H
+  H["7. Consumidor: su propio<br/>.spec/ con pin de versión"]
 ```
 
 **La razón**: si se empieza por la tecnología, los criterios de aceptación quedan **atados a la
@@ -246,29 +261,76 @@ web-portal/                    ← repo 2 (consumidor)
 Esta es la guía operativa. Cada paso indica **quién** lo hace y **cómo saber que salió bien**. Los
 pasos con 👤 son tuyos y no los puede hacer un agente (gates humanos y operaciones de GitHub).
 
-### Fase 0 — Preparar la rama de trabajo y subir lo pendiente
+> ⚠️ **CORRECCIÓN 2026-09-28.** Una versión anterior de esta guía empezaba con
+> `git checkout -b spec/auth-service` **dentro del harness**, y escribía `.spec/auth-service/` aquí.
+> **Era un error**: contradecía ADR-012 (el `.spec/` pertenece al repositorio que lo contiene). Los
+> artefactos de un componente **no** se escriben en el repositorio del harness. La guía corregida
+> empieza por **instanciar el componente**.
+>
+> **Y ese paso aún no es ejecutable**: `scripts/instanciar-harness` **no existe**. Ver §12 y §11.
 
-👤 **Paso 0.1 — Subir los commits pendientes.** El harness tiene 2 commits locales sin subir:
+### Dónde vive cada cosa (antes de empezar)
+
+```
+a:\jmm\libros\AI-First\ai-harness-architecture\   ← EL HARNESS (el framework)
+                                                   Contiene su propia .spec/ (del framework).
+                                                   NO contiene componentes.
+
+a:\proyectos\auth-service\                         ← EL COMPONENTE (repo nuevo)
+                                                   Su propio AGENTS.md, su .harness/, su .spec/.
+                                                   Instanciado DESDE el harness.
+```
+
+**Regla**: un artefacto de `auth-service` nunca se escribe dentro de `ai-harness-architecture`.
+
+---
+
+### Fase 0 — Instanciar el componente (⚠️ BLOQUEADO: el instanciador no existe)
+
+👤 **Paso 0.1 — Subir los commits pendientes del harness.**
 ```bash
+cd a:\jmm\libros\AI-First\ai-harness-architecture
 git push origin main
 ```
-✅ Verificar: `git status` dice «up to date with origin/main».
 
-👤 **Paso 0.2 — Crear la rama de la feature.** El flujo trabaja en rama, nunca en `main` (R2):
+👤 **Paso 0.2 — Instanciar el harness para crear el componente.** Debe producir un **repositorio
+nuevo** y autosuficiente:
 ```bash
-git checkout -b spec/auth-service
+# AÚN NO IMPLEMENTADO — este es el paso que falta (ADR-006, paso 3 del orden)
+python scripts/instanciar-harness.py \
+    --name auth-service \
+    --target a:\proyectos\auth-service \
+    --harness-version <versión fijada>
 ```
-✅ Verificar: `git branch --show-current` → `spec/auth-service`.
 
-> **Por qué una rama y no `main`:** el commit de `scope.md` es un commit más, y R2 exige que cada
-> commit corresponda a una unidad de trabajo. Trabajar en rama permite además que G3 (revisión
-> humana) revise el conjunto antes de integrarlo.
+Resultado esperado:
+```
+a:\proyectos\auth-service\
+  AGENTS.md            ← GENERADO: ley base + parámetros del componente ("NO EDITAR A MANO")
+  harness.config.json  ← con name: auth-service
+  init.sh              ← el gate del componente
+  .harness/  .agents/  .github/agents/
+  .gitignore
+  .spec/               ← VACÍO: aquí van SUS artefactos
+  .git/                ← SU propia historia, no la del harness
+```
+
+✅ **Verificar**: `cd a:\proyectos\auth-service && git log --oneline` muestra **su** primer commit,
+`python scripts/validate_harness.py` pasa, y `bash init.sh` da PASS.
+
+> **Por qué no basta con copiar la carpeta**: el componente necesita **identidad propia** (nombre,
+> ramas, rutas) y **versión fijada del harness** para poder actualizarse después (ADR-004, ADR-006).
 
 ---
 
 ### Fase 1 — `sdd-init` → `scope.md` (QUÉ, sin tecnología)
 
-👤 **Paso 1.1 — Invocar el agente.** En VS Code:
+👤 **Paso 1.1 — Abrir VS Code en el COMPONENTE**, no en el harness:
+```bash
+code a:\proyectos\auth-service
+```
+
+👤 **Paso 1.2 — Invocar el agente.** En VS Code:
 1. Abre el chat de Copilot: `Ctrl+Alt+I`
 2. Comprueba que el selector de modo dice **Agent** (no «Ask»)
 3. Abre el **selector de agentes** (desplegable junto al selector de modelo) y elige **`sdd-init`**
@@ -296,15 +358,19 @@ puedan consumir. Funcionalidad:
 > a ella.
 
 **Qué hace el agente**: lee `AGENTS.md`, carga la skill `spec-authoring`, y escribe
-`.spec/auth-service/scope.md`. Después **se detiene solo**.
+`.spec/auth-core/scope.md` **en el repositorio del componente**. Después **se detiene solo**.
 
-✅ **Verificar**: existe `.spec/auth-service/scope.md` y contiene criterios `AC-N` verificables.
+✅ **Verificar**: existe `a:\proyectos\auth-service\.spec\auth-core\scope.md` con criterios `AC-N`
+verificables.
+
+> **Nota sobre el nombre**: el repo es `auth-service` y la feature del primer corte es `auth-core`.
+> Si ambos se llamaran igual, la ruta quedaría redundante (`auth-service/.spec/auth-service/`).
 
 ---
 
 ### Fase 2 — 👤 GATE G1: aprobar el alcance
 
-👤 **Paso 2.1 — Leer y juzgar `.spec/auth-service/scope.md`.** Comprueba:
+👤 **Paso 2.1 — Leer y juzgar `.spec/auth-core/scope.md`** (en el repo del componente). Comprueba:
 - Cada `AC-N` es **verificable por comando u observación binaria** (R5).
 - Hay **no-objetivos** (mínimo 3).
 - Los supuestos **abiertos** están marcados como `ABIERTO`.
@@ -315,10 +381,12 @@ puedan consumir. Funcionalidad:
 - **Aprobado por**: Juan Moreno - 2026-09-28
 ```
 
-👤 **Paso 2.3 — Commit del alcance**:
+👤 **Paso 2.3 — Commit del alcance** (en el repo del componente):
 ```bash
-git add .spec/auth-service/scope.md
-git commit -m "spec(auth-service): scope aprobado (G1)"
+cd a:\proyectos\auth-service
+git checkout -b spec/auth-core        # la rama de ESTE componente
+git add .spec/auth-core/scope.md
+git commit -m "spec(auth-core): scope aprobado (G1)"
 ```
 
 > **Si algo no te convence**: no apruebes. Pide cambios al agente `sdd-init` en el mismo chat. Un G1
@@ -330,7 +398,7 @@ git commit -m "spec(auth-service): scope aprobado (G1)"
 
 👤 **Paso 3.1 — Invocar el agente.** Selector de agentes → **`sdd-tech-lead`**:
 ```
-Procesa el alcance de `.spec/auth-service/scope.md`. Ya está aprobado (G1).
+Procesa el alcance de `.spec/auth-core/scope.md`. Ya está aprobado (G1).
 ```
 
 **Qué produce**: `design.md` (arquitectura, interfaces, **contrato**, alternativas descartadas,
@@ -349,10 +417,10 @@ alternativa descartada**, dependencias justificadas, y una estrategia de test.
 👤 **Paso 4.2 — Revisar las tareas**: cada una con `## Objetivo`, `## Archivos` (lista cerrada),
 `## Criterio de aceptación` y `## Dependencias`. Una tarea de tipo «L» hay que partirla.
 
-👤 **Paso 4.3 — Aprobar** en `design.md`, commit:
+👤 **Paso 4.3 — Aprobar** en `design.md`, commit (en el repo del componente):
 ```bash
-git add .spec/auth-service/
-git commit -m "spec(auth-service): diseno y plan aprobados (G2)"
+git add .spec/auth-core/
+git commit -m "spec(auth-core): diseno y plan aprobados (G2)"
 ```
 
 ---
@@ -361,11 +429,11 @@ git commit -m "spec(auth-service): diseno y plan aprobados (G2)"
 
 👤 **Paso 5.1 — Invocar el agente por CADA tarea.** Selector → **`sdd-developer`**:
 ```
-Implementa la tarea 001 de `.spec/auth-service/tasks/`. El plan está aprobado (G2).
+Implementa la tarea 001 de `.spec/auth-core/tasks/`. El plan está aprobado (G2).
 ```
 
-**Qué hace**: crea la rama `task/auth-service/001`, escribe el test que falla, implementa, ejecuta
-`./init.sh`, y hace **un** commit `sdd: task 001 - ...`.
+**Qué hace**: crea la rama `task/auth-core/001` **en el repo del componente**, escribe el test que
+falla, implementa, ejecuta `./init.sh`, y hace **un** commit `sdd: task 001 - ...`.
 
 ✅ **Verificar tras cada tarea**:
 ```bash
@@ -384,8 +452,8 @@ git diff --stat HEAD~1      # solo archivos de la lista ## Archivos de esa tarea
 
 👤 **Paso 6.1 — Invocar el agente.** Selector → **`sdd-verifier`**:
 ```
-Verifica las tareas commiteadas de la feature `auth-service`.
-Escribe `.spec/auth-service/verify.md` con la salida literal de ./init.sh.
+Verifica las tareas commiteadas de la feature `auth-core`.
+Escribe `.spec/auth-core/verify.md` con la salida literal de ./init.sh.
 ```
 
 **Qué produce**: `verify.md` con trazabilidad AC↔código, salida **literal** del gate, y veredicto
@@ -401,15 +469,16 @@ R3 como **no verificable técnicamente**. Eso es **correcto**: es deuda anotada,
 👤 **Paso 7.1 — Revisar `verify.md`** y el diff completo. Comprobar que las deudas están declaradas y
 no ocultas.
 
-👤 **Paso 7.2 — Aprobar y mergear** a `main`:
+👤 **Paso 7.2 — Aprobar y mergear** a `main` **del componente**:
 ```bash
+cd a:\proyectos\auth-service
 git checkout main
-git merge --no-ff spec/auth-service -m "feat(auth-service): modulo de autenticacion verificado"
+git merge --no-ff spec/auth-core -m "feat(auth-core): autenticacion verificada"
 git push origin main
 ```
 
-👤 **Paso 7.3 — Subir el componente a su propio repositorio remoto** (paso futuro: `auth-service`
-será un repo independiente, ADR-012).
+👤 **Paso 7.3 — Publicar el contrato y el ambiente** (solo si el componente es `cross`, ADR-013): el
+consumidor necesita saber **qué versión** consumir y **dónde probar**. Sin eso, no puede integrarse.
 
 ---
 
@@ -516,17 +585,21 @@ divergen en silencio**.
 
 ## 12. Siguiente acción concreta
 
+**El paso 4 del orden NO es ejecutable todavía.** Antes hay que crear la pieza que falta.
+
 ```
-1. [HECHO] Remoto privado creado, main sincronizado y proteccion creada (inerte, ADR-011)
-2. Lanzar `sdd-init` para la feature `auth`.                     ← agente
-3. Revisar el `scope.md` y aprobar G1 escribiendo:               ← TÚ
-   Aprobado por: Juan Moreno - 2026-09-XX
+1. [HECHO]  Remoto privado, push realizado, protección de rama (inerte, ADR-011)
+2. [HECHO]  ADR-012/013/014 y arreglo de los 3 roles bloqueados
+3. PENDIENTE Rol `harness-maintainer` (ADR-007)              ← habilita escribir en scripts/
+4. PENDIENTE `scripts/instanciar-harness` (ADR-006) + versión única (ADR-004)
+5. PENDIENTE Instanciar `auth-service` en su propio repo      ← CREA el componente
+6. PENDIENTE SDD del componente: fases 1–7 de §7              ← aquí sí: sdd-init, G1, ...
 ```
 
-Ese es el punto exacto de continuación. Todo lo anterior está en disco y verificado.
+Cada uno de los pasos 3–5 es **PR de harness** (R4) y **la apruebas tú**.
 
-> **Nota sobre el slug**: la feature se llama `auth` (no `auth-laravel`), porque abarca **dos**
-> componentes** (Laravel + Vue) y el slug no debe nombrar una tecnología.
+> **Nota sobre el slug**: el repo es `auth-service` y la feature del primer corte es `auth-core`.
+> Si ambos se llamaran igual, la ruta sería redundante (`auth-service/.spec/auth-service/`).
 
 ---
 
