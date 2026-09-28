@@ -15,6 +15,7 @@ cambia, se escribe uno nuevo y el anterior pasa a `reemplazada por ADR-NNN`.
 | [008](./008-ciclo-completo-para-toda-aplicacion.md) | Ciclo SDD completo para todo componente de aplicación, sin umbral de tamaño | `aceptada` (impl. pendiente) | 2026-09-27 |
 | [009](./009-primera-aplicacion-auth-laravel.md) | Módulo de autenticación (Laravel 12 / PHP 8.2) como primera aplicación y template | `aceptada` (impl. pendiente) | 2026-09-27 |
 | [010](./010-remoto-privado-en-github.md) | Remoto privado en GitHub para que R3 sea ejecutable | `aceptada` (impl. pendiente) | 2026-09-27 |
+| [011](./011-g3-revision-local-y-proteccion-inerte.md) | G3 es revisión humana local; la protección de rama queda inerte y declarada | `aceptada` (impl. pendiente) | 2026-09-27 |
 
 > Los ADR 004–010 responden a las decisiones abiertas **A1–A7** de
 > [`docs/propuesta-harness-instanciable.md`](../../../docs/propuesta-harness-instanciable.md).
@@ -43,6 +44,13 @@ registrados porque son fáciles de repetir:
    `routing.yaml`) y ninguna representaba al conjunto. Nada detectaba que divergieran. Tercera
    ocurrencia del mismo patrón: **un dato crítico en copias que pueden divergir en silencio**. → ADR-004.
 
-La lección transversal: **un validador que nunca ha fallado no ha demostrado nada.** Por eso
+5. **Confundir una garantía aparente con un control real.** La protección de rama en GitHub se
+   guardó pero **no se aplica** en repositorios privados Free, y ni siquiera un plan de pago la haría
+   efectiva frente a un agente que comparte credenciales con el humano. Es la variante del mismo
+   patrón aplicada a una garantía en lugar de a un dato: **un check en `SKIP` no es un `PASS`; una
+   regla inerte no es una protección**. → ADR-011.
+
+La lección transversal: **un validador que nunca ha fallado no ha demostrado nada**, y **un límite es
+real cuando es capacidad ausente, no cuando es una instrucción**. Por eso
 `scripts/validate_harness.py` se probó con un modelo inventado (`modelo-que-no-existe-123`) para
 confirmar que falla de verdad (código de salida 1) en lugar de dar un falso verde.

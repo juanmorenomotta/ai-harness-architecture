@@ -23,8 +23,8 @@ ningún `tasks/` y ningún `verify.md`. El siguiente hito es **la primera aplica
 | :--- | :--- |
 | Rama | `main` — commits `6b9052c` → `5332e3b` |
 | Último commit | `5332e3b docs: corregir D2 (sin herencia) y el paso 5 segun ADR-005` |
-| Remoto git | **`origin` → `github.com/juanmorenomotta/ai-harness-architecture`** (privado), **sincronizado** en `631ce94` (0 ahead / 0 behind) |
-| Protección de `main` | **Verificar en la web**: Settings → Branches (R3/G3 dependen de ella) |
+| Remoto git | **`origin` → `github.com/juanmorenomotta/ai-harness-architecture`** (privado), **sincronizado** (0 ahead / 0 behind) |
+| Protección de `main` | **Creada pero INERTE** (repo privado + plan Free). Ver §4, hueco 2 |
 | `python scripts/validate_harness.py` | **85 comprobaciones, COHERENTE** (exit 0) |
 | `bash init.sh` | **PASS** (con `lint`/`format`/`typecheck`/`tests` en **SKIP**) |
 | ADRs | 10 (001–010), todos `aceptada`; 004–010 con **implementación pendiente** |
@@ -57,6 +57,7 @@ Respuesta a las decisiones abiertas **A1–A7** de `docs/propuesta-harness-insta
 | **008** | Ciclo SDD **completo para toda aplicación**, sin umbral de tamaño | Frontera por **naturaleza**, no por tamaño (verificable, R5) |
 | **009** | Primera aplicación: **auth (correo + contraseña)**, **dos componentes**: backend **Laravel 12 / PHP 8.2** y frontend **Vue** | Ver §5: tiene un **bloqueo** |
 | **010** | **Remoto privado en GitHub** | Habilita R3 y G3 |
+| **011** | **G3 es revisión humana LOCAL**; la protección de rama es **inerte** | Ver §4: R3 no es control técnico |
 
 Los ADR están en `.spec/_harness/ADR/` y el índice en `ADR/README.md`.
 
@@ -94,10 +95,26 @@ conocimiento de stack **embebido**, que es justo el acoplamiento que el nivel 3 
 
 **Arreglo**: PR de harness (R4, requiere aprobación humana). **`init.sh` es intocable por agentes.**
 
-### Hueco 2 — Sin remoto, R3 y G3 no son ejecutables
+### Hueco 2 — R3 y G3 NO son controles técnicos (hallazgo 2026-09-27)
 
-R3 dice «el agente abre PR; un humano aprueba y mergea». Sin remoto no hay PR. **Arreglo**: ADR-010
-(alta manual, la haces tú). `gh` no está instalado.
+R3 dice «el agente abre PR; un humano aprueba y mergea». Verificado contra la documentación oficial
+de GitHub:
+
+1. **La protección de rama no existe en repositorios privados con plan Free.** GitHub lo avisa al
+   activarla: «Tus reglas no se aplicarán en este repositorio privado hasta que migres a una cuenta
+de organización de GitHub Team». La regla **se guarda pero no se aplica**.
+2. **Aunque se pagara, no bastaría**: los administradores se saltan las reglas por defecto, y
+   **GitHub ve una sola identidad** — los agentes usan la terminal y las credenciales del humano. Una
+   prueba: el `git push origin main` de esta sesión pasó sin barrera alguna.
+
+**Conclusión**: R3 es hoy una **regla de proceso, no un control técnico** (ADR-011). No se arregla
+pagando: se arregla **separando identidades** (PAT o GitHub App de menor privilegio para agentes).
+
+**Mitigación actual**: G3 se ejecuta como **revisión humana LOCAL** — el humano revisa `verify.md` y
+el diff antes de que llegue a `main`. El flujo SDD se ejercita íntegro; falta el mecanismo técnico.
+
+> **No contarla como cumplimiento de R3** en `verify.md` mientras sea inerte: misma lógica por la que
+> un check en `SKIP` no debe contarse como `PASS`.
 
 ### Hueco 3 — `scripts/` sin rol que lo escriba
 
@@ -128,8 +145,9 @@ verdad.**
 
 | # | Pregunta | Estado |
 | :--- | :--- | :--- |
-| 1 | ¿Creas el **remoto privado** de ADR-010? | **HECHO**: `origin` configurado y `main` sincronizado. Falta **verificar la protección de rama** en la web |
+| 1 | ¿Creas el **remoto privado** de ADR-010? | **HECHO**: `origin` configurado y `main` sincronizado en `1af713c` |
 | 2 | ~~¿Co-firma de ADR-007?~~ | **RESUELTO**: Juan Moreno es el Tech Lead humano → co-firmado |
+| 3 | Protección de rama | **Creada e inerte** (ADR-011). Se conserva para que se active al migrar de plan |
 
 ---
 
@@ -244,9 +262,11 @@ divergen en silencio**.
 | 2 | Confundir **catálogo nativo** con el aportado por una **extensión** | ADR-002 |
 | 3 | Vínculos **agente ↔ skill** escritos en prosa, sin check. 3 de 8 incompletos | ADR-003 |
 | 4 | **Cinco versiones** del harness independientes, sin coordinación | ADR-004 |
+| 5 | **Garantía aparente**: protección de rama inerte; un `SKIP` contado como `PASS` | ADR-011 |
 
-**Lección transversal**: *un validador que nunca ha fallado no ha demostrado nada.* Cuando se añada un
-check, **probarlo con un fixture que deba fallar** y confirmar el código 1 antes de darlo por bueno.
+**Dos lecciones transversales**:
+- *Un validador que nunca ha fallado no ha demostrado nada.*
+- *Un límite es real cuando es **capacidad ausente**, no cuando es una instrucción.*
 
 ### Otras trampas verificadas
 
@@ -278,6 +298,7 @@ check, **probarlo con un fixture que deba fallar** y confirmar el código 1 ante
 | :--- | :--- | :--- |
 | **0** | Reclasificar `validator-runner` como **chore** de harness | Pendiente |
 | **1** | **Activar el gate**: rama PHP en `init.sh` (el **remoto git ya está hecho**) | **Bloquea la verificación real** |
+| **1b** | **Separar identidades** agente/humano (PAT o GitHub App de menor privilegio) → R3 pasa a ser control técnico (ADR-011) | **Deuda registrada**; no bloquea la primera prueba |
 | **2** | **Versión única del harness** (ADR-004) | Decidido, sin implementar |
 | **3** | **`instanciar-harness`** (ADR-006) | Decidido, sin implementar |
 | **4** | **Primera aplicación**: auth Laravel 12 → **AQUÍ ESTAMOS** | Listo para arrancar |
@@ -293,7 +314,7 @@ check, **probarlo con un fixture que deba fallar** y confirmar el código 1 ante
 ## 11. Siguiente acción concreta
 
 ```
-1. [HECHO] Remoto privado creado y main sincronizado.            ← verificar proteccion de rama (§12 paso 6)
+1. [HECHO] Remoto privado creado, main sincronizado y proteccion creada (inerte, ADR-011)
 2. Lanzar `sdd-init` para la feature `auth`.                     ← agente
 3. Revisar el `scope.md` y aprobar G1 escribiendo:               ← TÚ
    Aprobado por: Juan Moreno - 2026-09-XX
@@ -336,7 +357,11 @@ tokens en archivos del repo.
 - ☑ Require a pull request before merging · ☑ Require approvals: **1**
 - ☐ **NO** activar «Allow force pushes» (R3)
 
-Esto es lo que hace **R3 y G3 ejecutables de verdad**; sin ello son convención, no control.
+> ⚠️ **Corrección (2026-09-27)**: la afirmación «esto hace R3 y G3 ejecutables de verdad» era
+> **incorrecta**. En repositorios **privados con plan Free** la regla **se guarda pero no se aplica**,
+> y ningún plan la hace efectiva frente a un agente que comparte credenciales con el humano.
+> Ver **ADR-011** y §4, hueco 2. La regla se **conserva** para que se active si se migra a
+> organización **Team** o superior.
 
 **Paso 7 — Verificar**:
 ```bash
