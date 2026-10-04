@@ -70,9 +70,16 @@ MODEL_SCOPED_SKILLS = {"model-switching"}
 # Se eximen del check de `edit` porque escribir no es su trabajo, no por olvido.
 ROLES_WITHOUT_OWN_ARTIFACT = {"sdd-security-reviewer"}
 
-# Roles que NO producen artefactos propios: entregan su informe a otro rol.
-# Se exime del check de `edit` porque escribir no es su trabajo, no por olvido.
-ROLES_WITHOUT_OWN_ARTIFACT = {"sdd-security-reviewer"}
+MAINTAINER_ROLE = "harness-maintainer"
+
+# Solo el maintainer puede escribir aqui; ningun otro rol puede declararlo.
+HARNESS_WRITE_PREFIXES = ("scripts/", ".harness/", ".agents/")
+
+# Ni siquiera el maintainer puede escribir la ley ni CI (ADR-007).
+LAW_PATHS_NEVER_WRITABLE = ("AGENTS.md", ".github/workflows/**")
+
+# Unicas rutas de global_deny que admiten una excepcion, y solo para el maintainer.
+MAINTAINER_EXCEPTION_PATTERNS = {".harness/**", ".agents/**"}
 
 EXPECTED_ROLES = [
     "sdd-init",
@@ -80,6 +87,7 @@ EXPECTED_ROLES = [
     "sdd-developer",
     "sdd-verifier",
     "sdd-security-reviewer",
+    MAINTAINER_ROLE,
 ]
 
 # Referencia oficial de VS Code (Agent Skills): campos ADMITIDOS en el
@@ -428,6 +436,60 @@ def check_permissions(report: Report, permissions: dict) -> None:
         )
 
 
+def check_harness_maintainer_limits(report: Report, permissions: dict) -> None:
+    """ADR-007: solo el maintainer escribe en el harness, y nunca la ley ni CI.
+
+    Un limite es real cuando es capacidad ausente, no una instruccion: se comprueba que
+    ningun otro rol declare escritura en el harness y que la excepcion de global_deny
+    no se amplie mas alla de .harness/** y .agents/** ni a otros roles.
+    """
+    pol_roles = permissions.get("roles") or {}
+
+    for role, policy in pol_roles.items():
+        if role == MAINTAINER_ROLE or not isinstance(policy, dict):
+            continue
+        report.tick()
+        leaked = [
+            str(p)
+            for p in (policy.get("writable_paths") or [])
+            if str(p).startswith(HARNESS_WRITE_PREFIXES)
+        ]
+        if leaked:
+            report.error(
+                f"'{role}': declara escritura en el harness ({', '.join(leaked)}). "
+                f"Solo '{MAINTAINER_ROLE}' puede (ADR-007)"
+            )
+
+    policy = pol_roles.get(MAINTAINER_ROLE)
+    report.tick()
+    if not isinstance(policy, dict):
+        report.error(f"'{MAINTAINER_ROLE}' no tiene politica en {POLICIES_FILE}")
+        return
+
+    writable = {str(p) for p in (policy.get("writable_paths") or [])}
+    protected = {str(p) for p in (policy.get("protected_paths") or [])}
+    for path in LAW_PATHS_NEVER_WRITABLE:
+        report.tick()
+        if path in writable:
+            report.error(f"'{MAINTAINER_ROLE}': tiene '{path}' en writable_paths; la ley y CI son solo humanas")
+        if path not in protected:
+            report.error(f"'{MAINTAINER_ROLE}': falta '{path}' en protected_paths")
+
+    for entry in (permissions.get("global_deny") or {}).get("paths") or []:
+        if not isinstance(entry, dict) or not entry.get("except_roles"):
+            continue
+        report.tick()
+        pattern = str(entry.get("pattern"))
+        if pattern not in MAINTAINER_EXCEPTION_PATTERNS:
+            report.error(f"global_deny: la ruta '{pattern}' no admite excepciones de rol (ADR-007)")
+        others = [str(r) for r in entry["except_roles"] if str(r) != MAINTAINER_ROLE]
+        if others:
+            report.error(
+                f"global_deny '{pattern}': la excepcion solo puede ser '{MAINTAINER_ROLE}', "
+                f"no {', '.join(others)}"
+            )
+
+
 def check_law_rules(report: Report) -> None:
     """Las diez reglas de oro y la prohibición de auto-merge deben estar en la ley."""
     law = read_text(LAW_FILE)
@@ -760,6 +822,7 @@ def validate(report: Report) -> None:
     check_layer_separation(report, allowed_aliases)
     check_permissions(report, permissions)
     check_role_tools_consistency(report, permissions)
+    check_harness_maintainer_limits(report, permissions)
     check_law_rules(report)
     check_skills_referenced(report)
     check_adapters_synced(report, roles_cfg, alias_block)

@@ -11,7 +11,7 @@ cambia, se escribe uno nuevo y el anterior pasa a `reemplazada por ADR-NNN`.
 | [004](./004-identificador-unico-de-version-del-harness.md) | Identificador único de versión del harness (`.harness/harness.version` + check) | `aceptada` (impl. pendiente) | 2026-09-27 |
 | [005](./005-un-solo-harness-base-especializacion-en-nivel-3.md) | Un solo harness base; la especialización por dominio vive en el nivel 3 | `aceptada` (impl. pendiente) | 2026-09-27 |
 | [006](./006-agents-md-del-proyecto-generado.md) | El `AGENTS.md` del proyecto es un artefacto generado | `aceptada` (impl. pendiente) | 2026-09-27 |
-| [007](./007-rol-harness-maintainer.md) | Rol `harness-maintainer`; `scripts/` no es escribible por el Developer | `aceptada` (impl. pendiente) | 2026-09-27 |
+| [007](./007-rol-harness-maintainer.md) | Rol `harness-maintainer`; `scripts/` no es escribible por el Developer | `aceptada` (impl. hecha 2026-10-04, pendiente de revisión humana) | 2026-09-27 |
 | [008](./008-ciclo-completo-para-toda-aplicacion.md) | Ciclo SDD completo para todo componente de aplicación, sin umbral de tamaño | `aceptada` (impl. pendiente) | 2026-09-27 |
 | [009](./009-primera-aplicacion-auth-laravel.md) | Módulo de autenticación (Laravel 12 / PHP 8.2) como primera aplicación y template | `aceptada` (impl. pendiente) | 2026-09-27 |
 | [010](./010-remoto-privado-en-github.md) | Remoto privado en GitHub para que R3 sea ejecutable | `aceptada` (impl. pendiente) | 2026-09-27 |

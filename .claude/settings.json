@@ -2,6 +2,7 @@
   "//": "GENERADO por scripts/sync-adapters.sh — NO EDITAR A MANO. Fuente: .harness/models.yaml",
   "availableModels": ["DeepSeek V4 Flash (deepseek)", "claude-sonnet-5", "gpt-5.3-codex", "gpt-5.6-terra"],
   "agents": {
+    "harness-maintainer": { "model": "gpt-5.3-codex", "reasoning": "medium", "temperature": 0.1 },
     "sdd-developer": { "model": "gpt-5.3-codex", "reasoning": "medium", "temperature": 0.1 },
     "sdd-init": { "model": "claude-sonnet-5", "reasoning": "high", "temperature": 0.2 },
     "sdd-security-reviewer": { "model": "claude-sonnet-5", "reasoning": "high", "temperature": 0.0 },

@@ -85,6 +85,30 @@ roles:
       - execute
     writable_paths: []   # reporta al Verifier; no escribe artefactos propios
 
+  # Mantiene el harness (ADR-007). Es el UNICO rol con escritura sobre scripts/.harness/.agents.
+  harness-maintainer:
+    allow:
+      - read
+      - edit
+      - search
+      - execute
+      - todo
+    deny:
+      - web
+      - agent
+    writable_paths:
+      - "scripts/**"
+      - ".harness/**"
+      - ".agents/**"
+    protected_paths:
+      - "AGENTS.md"
+      - ".github/workflows/**"
+      - "init.sh"
+      - "harness.config.json"
+    notes:
+      - "Opera fuera del ciclo SDD: sin tasks/, revision humana obligatoria de su diff."
+      - "Nunca se invoca para ajustar el harness tras un gate fallido de una feature (R4, R6, R7)."
+
 # ---------------------------------------------------------------------------
 # Denegaciones globales: aplican a TODOS los roles, sin excepción.
 # ---------------------------------------------------------------------------
@@ -127,8 +151,10 @@ global_deny:
       reason: "R4: la ley solo cambia por PR humano explícito."
     - pattern: ".harness/**"
       reason: "R4: configuración del harness protegida."
+      except_roles: [harness-maintainer]
     - pattern: ".agents/**"
       reason: "R4: definición de roles protegida."
+      except_roles: [harness-maintainer]
     - pattern: ".github/workflows/**"
       reason: "Cambiar CI desde una tarea es un vector de bypass del gate."
     - pattern: ".git/**"

@@ -8,6 +8,7 @@ default = "DeepSeek V4 Flash (deepseek)"
 reasoning_effort = "high"
 
 [agents]
+harness-maintainer = { model = "gpt-5.3-codex", reasoning = "medium" }
 sdd-developer = { model = "gpt-5.3-codex", reasoning = "medium" }
 sdd-init = { model = "claude-sonnet-5", reasoning = "high" }
 sdd-security-reviewer = { model = "claude-sonnet-5", reasoning = "high" }

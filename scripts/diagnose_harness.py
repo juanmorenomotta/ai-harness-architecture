@@ -250,58 +250,17 @@ def dimension_3() -> DimensionResult:
     return result
 
 
-def _significant_lines(lines: list[str]) -> list[tuple[int, str]]:
-    """Devuelve (indentación, contenido) de las líneas no vacías ni comentadas."""
-    result: list[tuple[int, str]] = []
-    for raw in lines:
-        stripped = raw.strip()
-        if not stripped or stripped.startswith("#"):
-            continue
-        result.append((len(raw) - len(raw.lstrip()), stripped))
-    return result
-
-
-def _find_deny_entries(
-    blocks: list[tuple[int, str]], start: int, role_indent: int
-) -> tuple[list[str], int]:
-    """Extrae las entradas de la clave `deny:` dentro de la sección de un rol."""
-    entries: list[str] = []
-    in_deny = False
-    deny_indent = 0
-    index = start
-
-    while index < len(blocks):
-        indent, content = blocks[index]
-        if not in_deny:
-            if content.startswith("deny:"):
-                in_deny = True
-                deny_indent = indent
-            elif indent <= role_indent:
-                break  # fin de la sección del rol
-        else:
-            if content.startswith("- "):
-                entries.append(content[2:].strip())
-            elif indent <= deny_indent:
-                break
-        index += 1
-    return entries, index
-
-
-def verifier_cannot_edit(policies_text: str) -> bool:
-    """¿La política impide explícitamente que el Verifier edite código?
-
-    Se analiza por bloques en lugar de con una regex con backtracking: buscar
-    las entradas de `deny:` dentro de la sección `sdd-verifier`.
-    """
-    blocks = _significant_lines(policies_text.splitlines())
-
-    for index, (indent, content) in enumerate(blocks):
-        if content != "sdd-verifier:":
-            continue
-        entries, _ = _find_deny_entries(blocks, index + 1, indent)
-        return "edit" in entries
-
-    return False
+def verifier_limited_to_report() -> bool:
+    """¿El Verifier solo puede escribir su informe (verify.md) y no el código que revisa?"""
+    try:
+        policies = harness_yaml.load(str(ROOT / POLICIES_FILE))
+    except (OSError, ValueError):
+        return False
+    verifier = (policies.get("roles") or {}).get("sdd-verifier")
+    if not isinstance(verifier, dict):
+        return False
+    writable = [str(p) for p in (verifier.get("writable_paths") or [])]
+    return bool(writable) and all("verify.md" in p for p in writable)
 
 
 def dimension_4() -> DimensionResult:
@@ -313,9 +272,9 @@ def dimension_4() -> DimensionResult:
     else:
         result.gaps.append("sin rol de verificación independiente")
 
-    if verifier_cannot_edit(read(POLICIES_FILE)):
+    if verifier_limited_to_report():
         result.score += 1
-        result.evidence.append("el Verifier no puede editar código (independencia forzada)")
+        result.evidence.append("el Verifier solo puede escribir verify.md (independencia forzada)")
     else:
         result.gaps.append("el Verifier podría editar lo que revisa → pierde independencia")
 
