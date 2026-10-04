@@ -6,7 +6,7 @@
 > **Lista concreta de pendientes**: [`docs/pendientes.md`](./pendientes.md) — ayuda memoria de traspaso
 > con los pendientes y las decisiones abiertas.
 >
-> **Última actualización**: 2026-10-04 · **Estado global**: **19 ADR** · harness coherente (**136 checks**)
+> **Última actualización**: 2026-10-04 · **Estado global**: **20 ADR** · harness coherente (**136 checks**)
 > · gate en PASS · remoto GitHub creado y sincronizado · **1 componente instanciado**
 > (`a:\proyectos\auth-service`), **0 features implementadas**.
 >
@@ -51,7 +51,7 @@ en el componente** y recorrer el ciclo completo.
 
 ---
 
-## 3. Lo que está decidido (ADR-004 a ADR-019)
+## 3. Lo que está decidido (ADR-004 a ADR-020)
 
 | ADR | Decisión | Consecuencia práctica |
 | :--- | :--- | :--- |
@@ -65,6 +65,7 @@ en el componente** y recorrer el ciclo completo.
 | **017** | El maintainer puede **ampliar** el gate, no vaciarlo | `init.sh` y `harness.config.json` escribibles, con check de integridad |
 | **018** | La **identidad** del repositorio se declara y verifica | Dos severidades: aviso en el harness, error en un componente |
 | **019** | El **instanciador** extrae del propio árbol con `git archive` | Sin red ni credenciales; exige árbol limpio; modo `--check` |
+| **020** | **Un clon del harness por aplicación**; el workspace es una carpeta sin versionar | Varios workspaces, donde el desarrollador quiera |
 | **009** | Primer componente: **`auth-service`**, clase **`cross`**, Laravel 12 / PHP 8.2 + consumidor frontend Vue | Ver §5: tiene un **bloqueo** |
 | **010** | **Remoto privado en GitHub** | Habilita R3 y G3 |
 | **011** | **G3 es revisión humana LOCAL**; la protección de rama es **inerte** | Ver §4: R3 no es control técnico |
@@ -302,6 +303,27 @@ a:\proyectos\                        ← EL WORKSPACE (carpeta simple, NO es un 
    una carpeta que los agrupa. No tiene `.git`, no se versiona.
 2. **Un artefacto de un componente nunca se escribe dentro de `ai-harness-architecture`.**
 3. El harness se clona **una vez** en el workspace; los componentes se **instancian** desde él.
+4. **Un clon del harness por aplicación** (ADR-020). Si tienes otra aplicación, es **otro workspace**,
+   con **su propio** clon del harness y en la ruta que quieras:
+
+```
+A:\proyectos\facturacion\          ← workspace 1 (carpeta sin git)
+├── ai-harness-architecture\       ← SU clon del harness
+├── api-service\
+└── web-portal\
+
+D:\clientes\acme\inventario\       ← workspace 2 (otra ruta, otra aplicación)
+├── ai-harness-architecture\       ← SU PROPIO clon
+└── stock-service\
+```
+
+> **Por qué un clon por aplicación** (ADR-020): cada app queda autocontenida y su versión del harness
+> es un hecho local. El precio es que actualizar el harness son N `git pull` (uno por aplicación).
+> El workspace **no se versiona**: no hay nada que versionar, porque su contenido son repositorios que
+> ya tienen su propia historia.
+
+> **Si un componente debe servir a varias aplicaciones**, no lo compartas por carpeta: conviértelo en
+> un componente **`cross`** (ADR-013), con su propio repo y su contrato versionado.
 
 > **Por qué el workspace es local**: ADR-012 lo llama «manifiesto de workspace» — sirve para saber qué
 > componentes tienes y en qué versión del harness van. Es tuyo, no se versiona y no es un nivel de la
@@ -669,7 +691,7 @@ no se comprueba**.
 | [`docs/pendientes.md`](./pendientes.md) | **Ayuda memoria de traspaso**: los 4 bloqueos, pendientes menores y decisiones abiertas |
 | [`docs/propuesta-harness-instanciable.md`](./propuesta-harness-instanciable.md) | Modelo de instanciación, decisiones D1–D3, abiertas A1–A7, anexos A3/A4 |
 | [`docs/desacoplamiento-arquitectura-software.md`](./desacoplamiento-arquitectura-software.md) | Diseño del eje de stack: `stack.md`, `template.yaml`, `agent_profile.md` |
-| [`.spec/_harness/ADR/README.md`](../.spec/_harness/ADR/README.md) | Índice de los **19 ADR** |
+| [`.spec/_harness/ADR/README.md`](../.spec/_harness/ADR/README.md) | Índice de los **20 ADR** |
 | [`.spec/validator-runner/scope.md`](../.spec/validator-runner/scope.md) | Feature **varada**: reclasificar como chore (5 supuestos ABIERTOS) |
 
 ---
