@@ -20,6 +20,7 @@ cambia, se escribe uno nuevo y el anterior pasa a `reemplazada por ADR-NNN`.
 | [013](./013-componentes-cross-ownership-y-gates.md) | Componentes **cross**: ownership declarado, contrato versionado y gate **G4** | `aceptada` (impl. pendiente) | 2026-09-28 |
 | [014](./014-contribucion-externa-y-g4.md) | Contribución externa: `contrib/<change-id>` y la regla del «mismo humano en dos sombreros» | `aceptada` (impl. pendiente) | 2026-09-28 |
 | [015](./015-adaptadores-llevan-el-procedimiento-del-rol.md) | Los adaptadores llevan el procedimiento del rol, verificado por contenido | `aceptada` (impl. hecha 2026-10-04) | 2026-10-04 |
+| [016](./016-arranque-en-frio-conversacion-nueva.md) | El arranque en frío se consigue con **conversación nueva**, no con la selección de agente | `aceptada` (impl. hecha 2026-10-04) | 2026-10-04 |
 
 > Los ADR 004–010 responden a las decisiones abiertas **A1–A7** de
 > [`docs/propuesta-harness-instanciable.md`](../../../docs/propuesta-harness-instanciable.md).
@@ -59,7 +60,13 @@ registrados porque son fáciles de repetir:
    de Copilot estaban **sin el procedimiento de su rol** (un `sed` frágil ante CRLF). Un check solo es
    real cuando **mira algo distinto de sí mismo**. → ADR-015.
 
-La lección transversal: **un validador que nunca ha fallado no ha demostrado nada**, y **un límite es
-real cuando es capacidad ausente, no cuando es una instrucción**. Por eso
+7. **Un protocolo sin mecanismo.** `AGENTS.md` §6 dice «no asumas contexto de sesiones anteriores»,
+   pero el harness asumía que **seleccionar un agente** bastaba para conseguir el arranque en frío.
+   La prueba de dos escenarios demostró que no: en un chat existente el agente hereda el historial; en
+   uno **nuevo** no sabe qué es D-1 y va a buscarlo a disco. → ADR-016.
+
+La lección transversal: **un validador que nunca ha fallado no ha demostrado nada**; **un límite es
+real cuando es capacidad ausente, no cuando es una instrucción**; y **un check solo es real cuando mira
+algo distinto de sí mismo**. Por eso
 `scripts/validate_harness.py` se probó con un modelo inventado (`modelo-que-no-existe-123`) para
 confirmar que falla de verdad (código de salida 1) en lugar de dar un falso verde.

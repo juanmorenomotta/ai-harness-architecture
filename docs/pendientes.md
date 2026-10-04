@@ -286,16 +286,17 @@ repos** y el gate **G4** de compatibilidad. Activa `sdd-security-reviewer`, **qu
 | 11 | **`harness.config.json`: `"name": "deepseek-harness"`** → identidad real | ⚠️ **Bloqueado por alcance** · **precondición del 3** | 006 |
 | 12 | **Suite de conformidad de templates** | Pendiente | 013 |
 | 13 | **Limpiar `.spec/_harness/diagnostic.md:94`** | Pendiente (menor) | 010 |
-| 14 | **Probar el aislamiento del subagente** `harness-maintainer` en el selector | Pendiente | — |
+| 14 | **Probar el aislamiento del subagente** en el selector | ✅ **HECHO 2026-10-04** | — |
+| 15 | **AGENTS.md §6**: precisar el mecanismo del arranque en frío (conversación nueva) | Pendiente → **PR humana** (R4 + bump de versión) | 016 |
 
 Detalle del pendiente 5: `init.sh` detecta `composer.json` pero **no tiene rama PHP** en
 lint/format/typecheck/tests, así que el gate diría **PASS sin comprobar PHP**. Se hace **cuando exista
 el proyecto Laravel real**, no antes: escribirlo a ciegas sería especular.
 
-Detalle del pendiente 14: comprobar que el subagente arranca **en frío**. Pregunta algo que solo exista
-en la conversación y en ningún archivo, con `harness-maintainer` seleccionado: si responde con ese
-contexto, no hay aislamiento. Relacionado: hasta el 2026-10-04 el adaptador no llevaba el procedimiento
-del rol, así que ninguna prueba anterior era concluyente (ADR-015).
+Detalle del pendiente 14 (**HECHO**): la prueba de dos escenarios demostró que **la selección de agente
+no aísla; la conversación nueva sí**. En un chat existente el agente hereda el historial; en uno nuevo
+no sabe qué es D-1 y va a buscarlo a disco. Registrado en **ADR-016**, con la regla operativa de abrir
+**una conversación nueva por fase** del ciclo SDD.
 
 ---
 
@@ -303,12 +304,41 @@ del rol, así que ninguna prueba anterior era concluyente (ADR-015).
 
 | # | Decisión | Bloquea | Opciones |
 | :--- | :--- | :--- | :--- |
-| **D-1** | **Origen del harness base** para el instanciador | PENDIENTE 3 | A (copia local) · **B (clonar del remoto por tag)** · C (`git archive`) |
+| **D-1** | **Origen del harness base** para el instanciador | PENDIENTE 3 | **D (extraer del propio árbol con `git archive`)** ← recomendada · A (copia local) · B (clonar por tag) · C (`git archive` de una ref remota) |
 | **D-4** | ¿Se **amplía el alcance** del `harness-maintainer` a `init.sh` y `harness.config.json`? | Pendientes 5, 9 y 11 | **Sí** (PR de harness) · No (PR humana cada vez) |
 | **D-3** | ¿Se **reclasifica `validator-runner`** como chore y se archiva su `scope.md`? | PENDIENTE 6 | — |
 
 **D-2 (¿`auth-service` como `cross` o reducido?) quedó RESUELTA**: ADR-009 revisado lo define como
 clase `cross` con contrato versionado y gate G4.
+
+### D-1 corregida (2026-10-04): por qué NO la opción B
+
+La recomendación anterior (clonar por tag) se descartó tras verificar dos hechos:
+
+| Hecho verificado | Consecuencia |
+| :--- | :--- |
+| **No existe ningún tag**, ni local ni remoto | La opción B **no es ejecutable hoy**, y se recomendó como si lo fuera |
+| **El repo es privado** | Clonar sin intervención exige credenciales (token). R9 prohíbe secretos en disco, y depender del credential manager hace la operación **no determinista** |
+
+**Recomendación corregida — opción D**: el instanciador **vive dentro del harness**, así que no necesita
+clonar nada. Extrae de su propio árbol:
+
+```bash
+git archive HEAD | tar -x -C <destino>
+```
+
+| Ventaja | Por qué |
+| :--- | :--- |
+| **Determinista** | `git archive` extrae **solo lo commiteado**, ignora cambios sin commitear |
+| **Sin red ni credenciales** | No se clona un repo privado → R9 intacto |
+| **Autoverificable** | El script comprueba su procedencia: árbol limpio y versión coincidente |
+| **Disponible** | `git` y `tar` verificados en el entorno |
+
+**Condición obligatoria**: exigir **árbol limpio** y **fallar** si hay cambios sin commitear; si no,
+extraería algo distinto de lo que se ve.
+
+**Pin**: no hace falta tag. Se registran **ambos**: la versión para humanos (`1.0.0`) y el **SHA** para
+verificación de máquina (un tag se puede mover; un SHA no).
 
 Nota sobre **D-1**: con la versión `1.0.0` ya creada (ADR-004), la opción **B** es viable creando el tag:
 `git tag v1.0.0 && git push origin v1.0.0`.
@@ -323,7 +353,8 @@ Nota sobre **D-1**: con la versión `1.0.0` ya creada (ADR-004), la opción **B*
    (el 11 es precondicion del 3: la identidad vive en harness.config.json)
 3. Implementar PENDIENTE 3: scripts/instanciar-harness.py
 4. PENDIENTE 4: instanciar auth-service en a:\proyectos\auth-service
-5. Ahora si: lanzar `sdd-init` (guia completa en inicio-harness-sdd.md §7)
+5. Ahora si: lanzar `sdd-init` EN CONVERSACION NUEVA (ADR-016)
+   (guia completa en inicio-harness-sdd.md §7)
 ```
 
 **Los pendientes 3, 5, 9 y 11 son PRs de harness (R4) y los aprueba un humano. Ningún agente los hace solo.**
@@ -368,7 +399,7 @@ Nota sobre **D-1**: con la versión `1.0.0` ya creada (ADR-004), la opción **B*
 
 ---
 
-## 8. Patrón transversal del repositorio (**6 ocurrencias**)
+## 8. Patrón transversal del repositorio (**7 ocurrencias**)
 
 **Un dato crítico en copias que pueden divergir en silencio.** Es el hilo conductor de casi todos los ADR:
 
@@ -380,12 +411,13 @@ Nota sobre **D-1**: con la versión `1.0.0` ya creada (ADR-004), la opción **B*
 | 4 | **Cinco versiones** del harness sin coordinación | 004 |
 | 5 | **Garantía aparente**: protección de rama inerte; un `SKIP` contado como `PASS` | 011 |
 | 6 | **Un check que no puede fallar**: `--check` comparaba el generado contra sí mismo mientras 5 de 6 adaptadores estaban sin procedimiento | 015 |
+| 7 | **Un protocolo sin mecanismo**: «no asumas contexto» es una instrucción; aislar requiere conversación nueva | 016 |
 
 **Tres lecciones transversales**:
 - *Un validador que nunca ha fallado no ha demostrado nada.* → probar todo check con un fixture que
   deba fallar, y confirmar el código 1.
 - *Un límite es real cuando es **capacidad ausente**, no cuando es una instrucción.* → justifica
-  `harness-maintainer` (ADR-007) y la separación de identidades (ADR-011).
+  `harness-maintainer` (ADR-007), la separación de identidades (ADR-011) y el aislamiento (ADR-016).
 - *Un check solo es real cuando **mira algo distinto de sí mismo**.* → ADR-015.
 
 ---
@@ -398,7 +430,7 @@ Nota sobre **D-1**: con la versión `1.0.0` ya creada (ADR-004), la opción **B*
 | [`docs/inicio-harness-sdd.md`](./inicio-harness-sdd.md) | Arranque general + **guía paso a paso** de las fases 0–7 |
 | [`docs/propuesta-harness-instanciable.md`](./propuesta-harness-instanciable.md) | Modelo de instanciación, decisiones D1–D3, abiertas A1–A7, anexos A3/A4 |
 | [`docs/desacoplamiento-arquitectura-software.md`](./desacoplamiento-arquitectura-software.md) | Diseño del eje de stack: `stack.md`, `template.yaml`, `agent_profile.md` |
-| [`.spec/_harness/ADR/README.md`](../.spec/_harness/ADR/README.md) | **Índice de los 15 ADR** |
+| [`.spec/_harness/ADR/README.md`](../.spec/_harness/ADR/README.md) | **Índice de los 16 ADR** |
 | `.spec/validator-runner/scope.md` | Feature **varada** con 5 supuestos abiertos (ver PENDIENTE 6) |
 
 ---

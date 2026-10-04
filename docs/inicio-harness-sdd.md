@@ -264,6 +264,16 @@ web-portal/                    ← repo 2 (consumidor)
 Esta es la guía operativa. Cada paso indica **quién** lo hace y **cómo saber que salió bien**. Los
 pasos con 👤 son tuyos y no los puede hacer un agente (gates humanos y operaciones de GitHub).
 
+> 🔴 **REGLA DE ORO DE ESTA GUÍA (ADR-016)**: cada fase se lanza en una **CONVERSACIÓN NUEVA** de VS Code,
+> con el agente ya seleccionado. **No cambies de agente dentro de la misma conversación**: el agente
+> hereda el historial y se pierde el arranque en frío que exige `AGENTS.md` §6.
+>
+> Se verificó el 2026-10-04: con el agente `harness-maintainer` seleccionado en un chat **existente**,
+> respondió con contenido de la conversación; en un chat **nuevo**, dijo que no sabía de qué se hablaba
+> y fue a leer el repositorio. **La selección no aísla; la conversación nueva sí.**
+>
+> Consecuencia: **una conversación nueva por fase, y una por cada tarea** en la fase de implementación.
+
 > ⚠️ **CORRECCIÓN 2026-09-28.** Una versión anterior de esta guía empezaba con
 > `git checkout -b spec/auth-service` **dentro del harness**, y escribía `.spec/auth-service/` aquí.
 > **Era un error**: contradecía ADR-012 (el `.spec/` pertenece al repositorio que lo contiene). Los
@@ -333,8 +343,9 @@ a:\proyectos\auth-service\
 code a:\proyectos\auth-service
 ```
 
-👤 **Paso 1.2 — Invocar el agente.** En VS Code:
-1. Abre el chat de Copilot: `Ctrl+Alt+I`
+👤 **Paso 1.2 — Invocar el agente EN CONVERSACIÓN NUEVA.** Abre un chat **nuevo** de Copilot (no
+continúes uno existente) y:
+1. Abre el chat: `Ctrl+Alt+I`
 2. Comprueba que el selector de modo dice **Agent** (no «Ask»)
 3. Abre el **selector de agentes** (desplegable junto al selector de modelo) y elige **`sdd-init`**
 4. Escribe el prompt **funcional, sin tecnología**:
