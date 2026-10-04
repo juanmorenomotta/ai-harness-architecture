@@ -1,26 +1,28 @@
 # Pendientes — Ayuda memoria de traspaso
 
-> **Documento de traspaso.** Escrito al cerrar la sesión del **2026-09-28** para retomar mañana sin
-> pérdida de contexto. Complementa a [`inicio-harness-sdd.md`](./inicio-harness-sdd.md), que es el
-> documento de arranque general; **este** es la lista concreta de lo que falta por hacer.
+> **Documento de traspaso.** Ayuda memoria para retomar sin pérdida de contexto. Complementa a
+> [`inicio-harness-sdd.md`](./inicio-harness-sdd.md), que es el documento de arranque general; **este**
+> es la lista concreta de lo que falta por hacer.
 >
-> **Para retomar**: leer `AGENTS.md` → leer `inicio-harness-sdd.md` → leer este archivo → verificar
-> el estado real con los comandos de §1 (no fiarse de este texto: **caduca**).
+> **Última actualización**: 2026-10-04 · **Sesión cerrada en**: commit `8ddcb17`
+> **Para retomar**: leer `AGENTS.md` → `inicio-harness-sdd.md` → este archivo → verificar el estado
+> real con los comandos de §1 (no fiarse de este texto: **caduca**).
 
 ---
 
-## 1. Estado exacto al cerrar (verificado, no inferido)
+## 1. Estado exacto (verificado, no inferido)
 
 | Comprobación | Resultado |
 | :--- | :--- |
-| Rama | `main` |
-| Último commit local | `ba1954f docs: corregir guia (instanciar el componente antes del SDD)` |
-| Remoto | `origin` → `github.com/juanmorenomotta/ai-harness-architecture` (privado). **1 commit por subir** |
-| `python scripts/validate_harness.py` | **94 comprobaciones, COHERENTE** (exit 0) |
+| Rama | `main`, **sincronizada** con `origin/main` (0/0) |
+| Último commit | `8ddcb17 fix: copilot adapters carried the law but not the role procedure` |
+| Remoto | `origin` → `github.com/juanmorenomotta/ai-harness-architecture` (privado) |
+| `python scripts/validate_harness.py` | **123 comprobaciones, COHERENTE** (exit 0) |
+| `bash scripts/sync-adapters.sh --check` | **SINCRONIZADOS** (con check de contenido de rol) |
 | `bash init.sh` | **PASS** (con `lint`/`format`/`typecheck`/`tests` en **SKIP**) |
-| ADRs | **14** (001–014), todos `aceptada`; 004–014 con implementación **pendiente** |
+| ADRs | **15** (001–015). Implementados: 004, 007, 015. Resto con implementación pendiente |
 | Sin commitear | `.spec/validator-runner/`, `docs/desacoplamiento-arquitectura-software.md` (previos, fuera a propósito) |
-| Aplicaciones / componentes construidos | **NINGUNO** |
+| Componentes construidos | **NINGUNO** |
 
 ### Comandos de verificación obligatorios al retomar
 
@@ -34,27 +36,44 @@ bash init.sh
 
 ---
 
-## 2. La cadena de bloqueos (el hallazgo clave de hoy)
+## 2. La cadena de bloqueos
 
-**NADA del flujo SDD es ejecutable todavía.** Los bloqueos están encadenados y el orden importa:
+**NADA del flujo SDD es ejecutable todavía.** Los dos primeros eslabones ya están resueltos; quedan dos:
 
 ```mermaid
 flowchart LR
-  A["1. Rol harness-maintainer<br/>(ADR-007) NO existe"] --> B
-  B["2. Sin rol, nadie implementa<br/>scripts/instanciar-harness.py"] --> C
+  A["1. Rol harness-maintainer<br/>(ADR-007)"] --> B
+  B["2. instanciar-harness.py<br/>(ADR-006) NO existe"] --> C
   C["3. Sin instanciador no existe<br/>el repo del componente"] --> D
-  D["4. Sin componente, sdd-init<br/>no tiene dónde escribir"] --> E
-  E["5. Rama PHP del gate<br/>(solo para verificación real)"]
+  D["4. Sin componente, sdd-init<br/>no tiene dónde escribir"]
 ```
 
-| # | Bloqueo | Evidencia verificada |
+| # | Eslabón | Estado |
 | :--- | :--- | :--- |
-| 1 | **`harness-maintainer` no existe** | No hay `.agents/agents/harness-maintainer.md` ni entrada en `permissions.yaml` |
-| 2 | **`instanciar-harness` no existe** | `scripts/` tiene solo 4 archivos: `diagnose_harness.py`, `harness_yaml.py`, `sync-adapters.sh`, `validate_harness.py` |
-| 3 | **Sin instanciador no hay componente** | Y sin componente, `.spec/` no tiene dueño |
-| 4 | **La rama PHP del gate** | `init.sh` detecta `composer.json` pero **no tiene rama PHP** en lint/format/typecheck/tests |
+| 1 | Rol `harness-maintainer` | ✅ **RESUELTO** (2026-10-04, ADR-007) |
+| 2 | `scripts/instanciar-harness.py` | ❌ **NO existe** — bloqueado por **D-1** |
+| 3 | Repo del componente | ❌ Depende del eslabón 2 |
+| 4 | `sdd-init` escribiendo `scope.md` | ❌ Depende del eslabón 3 |
 
-### El error que se corrigió hoy (no repetirlo)
+### Hallazgo nuevo (2026-10-04): tres pendientes chocan con el alcance del rol
+
+Al aprobar ADR-007 se dejaron `init.sh` y `harness.config.json` **fuera** del `writable_paths` del
+`harness-maintainer`. Pero tres pendientes necesitan justo esos archivos:
+
+| Pendiente | Necesita | ¿Puede el rol hoy? |
+| :--- | :--- | :--- |
+| **5** — rama PHP del gate | `init.sh` | **No** |
+| **9** — gate G4 | `harness.config.json` | **No** |
+| **11** — nombre real (`deepseek-harness`) | `harness.config.json` | **No** |
+
+**El 11 no es cosmético**: el instanciador lee la identidad de `harness.config.json`. Si dice
+`deepseek-harness`, **cada componente instanciado nace con el nombre de otro repo**. Debería resolverse
+**antes o junto** al pendiente 3.
+
+Opciones: **ampliar el alcance** del rol a esos dos archivos (PR de harness; `AGENTS.md` y CI siguen
+excluidos), o hacerlos por **PR humana** cada vez.
+
+### El error corregido el 2026-09-28 (no repetirlo)
 
 La guía escribía `.spec/auth-service/` **dentro del repositorio del harness**, con
 `git checkout -b spec/auth-service` en el harness. **Contradecía ADR-012** (el `.spec/` pertenece al
@@ -69,14 +88,44 @@ a:\proyectos\auth-service\                         ← EL COMPONENTE (repo nuevo
 
 ---
 
-## 3. Los 4 pendientes, en orden de dependencia
+## 3. Los pendientes, en orden de dependencia
 
-### PENDIENTE 1 — Rol `harness-maintainer` (ADR-007) — ✅ HECHO 2026-10-04, pendiente de revisión humana
+### PENDIENTE 1 — Rol `harness-maintainer` (ADR-007) — ✅ **HECHO 2026-10-04**
 
-Implementado: prompt, política, `models.yaml` (1.3.0), `EXPECTED_ROLES` y adaptadores; validador 94 → 116
-comprobaciones con tres pruebas negativas. **Dos desviaciones a aprobar** (excepción en `global_deny` y
-`protected_paths` con `init.sh`/`harness.config.json`): ver «Implementación» en ADR-007. La descripción
-original se conserva debajo como contexto.
+Implementado y mergeado: prompt del rol, política, `models.yaml` (1.2.0 → 1.3.0), `EXPECTED_ROLES`,
+generador de adaptadores y el check `check_harness_maintainer_limits`. Validador 94 → 116 comprobaciones
+con tres pruebas negativas. **Dos desviaciones aprobadas** en el merge: excepción en `global_deny.paths`
+y `protected_paths` con `init.sh`/`harness.config.json` (ver «Implementación» en ADR-007 y §2 de este
+archivo para su consecuencia).
+
+---
+
+### HECHO NO PREVISTO — Adaptadores sin el procedimiento del rol (ADR-015) — ✅ **HECHO 2026-10-04**
+
+No estaba en la lista: lo destapó una prueba de aislamiento. **5 de los 6 adaptadores de Copilot
+contenían la ley pero no el procedimiento de su rol** (256 líneas, encabezado `## Definición del rol`
+vacío). Causa: `sed '1,/^---$/d'` no reconoce el cierre del frontmatter con **CRLF** y devolvía una
+línea. Agravante: `--check` comparaba el generado **contra sí mismo**, así que decía «sincronizados».
+
+Corregido con un helper `awk` tolerante a CRLF y **dos checks por contenido**. Adaptadores de 256 a
+303–320 líneas. Dos pruebas negativas con código 1.
+
+**Por qué importaba ya**: el instanciador (pendiente 3) copia los adaptadores a cada componente nuevo;
+sin este arreglo **habría propagado el defecto a todos**.
+
+---
+
+### PENDIENTE 2 — Versión única del harness (ADR-004) — ✅ **HECHO 2026-10-04**
+
+Creado `.harness/harness.version` con `harness: "1.0.0"` y las cinco versiones en `declared`, más
+`check_harness_version()` (116 → 123 comprobaciones). Tres pruebas negativas: divergencia, semver
+inválido y entrada ausente en `declared`.
+
+**Limitación registrada**: el manifiesto declara la versión de `AGENTS.md`, pero ningún rol puede
+escribirlo (R4). Subir la versión del contrato es acto humano, y hay que actualizar **dos** sitios
+(cabecera de `AGENTS.md` y el manifiesto).
+
+---
 
 **Para qué**: hoy **ningún rol puede escribir en `scripts/`**. `sdd-developer` solo tiene
 `src/`, `tests/`, `lib/`, `app/`. Sin este rol, el PENDIENTE 3 es imposible.
@@ -226,17 +275,27 @@ repos** y el gate **G4** de compatibilidad. Activa `sdd-security-reviewer`, **qu
 
 ## 4. Lo demás que queda pendiente (no bloquea el arranque)
 
-| # | Pendiente | ADR | Por qué |
+| # | Pendiente | Estado | ADR |
 | :--- | :--- | :--- | :--- |
-| 5 | **Rama PHP en `init.sh`** (Pint, PHPStan/Larastan, `vendor/bin/phpunit`) | 009 | Sin ella el gate dice **PASS sin comprobar PHP**. Hacerlo **cuando exista** el proyecto Laravel real (no especular) |
-| 6 | **`validator-runner`**: reclasificar como **chore**, no feature | — | Es una automatización de `scripts/`, no una feature de dominio. Su `scope.md` tiene **5 supuestos ABIERTOS** que bloquean su G1 |
-| 7 | **Separar identidades** agente/humano (PAT o GitHub App de menor privilegio) | 011 | Hoy **R3 no es control técnico**: GitHub ve una sola identidad. No se arregla pagando |
-| 8 | **`CODEOWNERS` + campo `ownership`** en el `template.yaml` | 013 | Sin esto, «PR aprobada por el owner» es una regla **sin artefacto** |
-| 9 | **Gate G4** en `harness.config.json` | 013 | Añadir a `requireHumanApprovalGates` |
-| 10 | **Extender `validate_harness.py`** con: coherencia de versiones (ADR-004), sincronización del `AGENTS.md` generado (ADR-006) | 004, 006 | Los checks que hacen reales esas decisiones |
-| 11 | **`harness.config.json`: `"name": "deepseek-harness"`** → identidad real | 006 | En un componente instanciado genera el `AGENTS.md` con **nombre equivocado** |
-| 12 | **Suite de conformidad de templates** | 013 | Antes de admitir un template: gate verde, licencia, sin CVEs, runtime no EOL |
-| 13 | **Limpiar `.spec/_harness/diagnostic.md:94`** | 010 | Contiene una ruta absoluta de máquina. Irrelevante en repo privado; limpiar si se publica |
+| 5 | **Rama PHP en `init.sh`** (Pint, PHPStan/Larastan, `vendor/bin/phpunit`) | ⚠️ **Bloqueado por alcance** | 009 |
+| 6 | **`validator-runner`**: reclasificar como **chore**, no feature | Pendiente | — |
+| 7 | **Separar identidades** agente/humano (PAT o GitHub App de menor privilegio) | Pendiente | 011 |
+| 8 | **`CODEOWNERS` + `ownership`** en el `template.yaml` | Pendiente | 013 |
+| 9 | **Gate G4** en `harness.config.json` | ⚠️ **Bloqueado por alcance** | 013 |
+| 10 | **Extender el validador**: coherencia de versiones ✅ · sincronización del `AGENTS.md` generado ❌ | 🔶 **Parcial** | 004, 006 |
+| 11 | **`harness.config.json`: `"name": "deepseek-harness"`** → identidad real | ⚠️ **Bloqueado por alcance** · **precondición del 3** | 006 |
+| 12 | **Suite de conformidad de templates** | Pendiente | 013 |
+| 13 | **Limpiar `.spec/_harness/diagnostic.md:94`** | Pendiente (menor) | 010 |
+| 14 | **Probar el aislamiento del subagente** `harness-maintainer` en el selector | Pendiente | — |
+
+Detalle del pendiente 5: `init.sh` detecta `composer.json` pero **no tiene rama PHP** en
+lint/format/typecheck/tests, así que el gate diría **PASS sin comprobar PHP**. Se hace **cuando exista
+el proyecto Laravel real**, no antes: escribirlo a ciegas sería especular.
+
+Detalle del pendiente 14: comprobar que el subagente arranca **en frío**. Pregunta algo que solo exista
+en la conversación y en ningún archivo, con `harness-maintainer` seleccionado: si responde con ese
+contexto, no hay aislamiento. Relacionado: hasta el 2026-10-04 el adaptador no llevaba el procedimiento
+del rol, así que ninguna prueba anterior era concluyente (ADR-015).
 
 ---
 
@@ -244,26 +303,30 @@ repos** y el gate **G4** de compatibilidad. Activa `sdd-security-reviewer`, **qu
 
 | # | Decisión | Bloquea | Opciones |
 | :--- | :--- | :--- | :--- |
-| **D-1** | **Origen del harness base** para el instanciador | PENDIENTE 3 | A (copia local) · **B (clonar del remoto)** · C (`git archive`) |
-| **D-2** | ¿`auth-service` se especifica como **`cross` completo** o con alcance reducido? | PENDIENTE 4 | Recomendado: **`cross`**, porque ejercita contrato + G4 |
+| **D-1** | **Origen del harness base** para el instanciador | PENDIENTE 3 | A (copia local) · **B (clonar del remoto por tag)** · C (`git archive`) |
+| **D-4** | ¿Se **amplía el alcance** del `harness-maintainer` a `init.sh` y `harness.config.json`? | Pendientes 5, 9 y 11 | **Sí** (PR de harness) · No (PR humana cada vez) |
 | **D-3** | ¿Se **reclasifica `validator-runner`** como chore y se archiva su `scope.md`? | PENDIENTE 6 | — |
+
+**D-2 (¿`auth-service` como `cross` o reducido?) quedó RESUELTA**: ADR-009 revisado lo define como
+clase `cross` con contrato versionado y gate G4.
+
+Nota sobre **D-1**: con la versión `1.0.0` ya creada (ADR-004), la opción **B** es viable creando el tag:
+`git tag v1.0.0 && git push origin v1.0.0`.
 
 ---
 
-## 6. Qué hacer mañana, paso a paso
+## 6. Qué hacer ahora, paso a paso
 
 ```
-1. git push origin main                       ← subir ba1954f (1 commit pendiente)
-2. Verificar: python scripts/validate_harness.py  → COHERENTE (94)
-3. Decidir D-1 (origen del harness base)
-4. Implementar PENDIENTE 1 (harness-maintainer)  ← el más pequeño y autónomo
-5. Implementar PENDIENTE 2 (versión única)        ← independiente del 1, se puede en paralelo
-6. Implementar PENDIENTE 3 (instanciar-harness)   ← necesita 1 y 2
-7. PENDIENTE 4: instanciar auth-service
-8. Ahora sí: lanzar `sdd-init` (guía completa en inicio-harness-sdd.md §7)
+1. Decidir D-1 (origen del harness base)          ← desbloquea el pendiente 3
+2. Decidir D-4 (alcance a init.sh/config.json)    ← desbloquea 5, 9 y 11
+   (el 11 es precondicion del 3: la identidad vive en harness.config.json)
+3. Implementar PENDIENTE 3: scripts/instanciar-harness.py
+4. PENDIENTE 4: instanciar auth-service en a:\proyectos\auth-service
+5. Ahora si: lanzar `sdd-init` (guia completa en inicio-harness-sdd.md §7)
 ```
 
-**Los pendientes 1, 2 y 3 son PRs de harness (R4) y los aprueba el humano. Ningún agente los hace solo.**
+**Los pendientes 3, 5, 9 y 11 son PRs de harness (R4) y los aprueba un humano. Ningún agente los hace solo.**
 
 ---
 
@@ -289,6 +352,12 @@ repos** y el gate **G4** de compatibilidad. Activa `sdd-security-reviewer`, **qu
 - **La protección de rama está INERTE** (repo privado + plan Free). No contarla como R3 cumplida
 - **`.agents/policies/permissions.yaml` cambió fuera de mis ediciones** en una ocasión: **leer siempre
   el archivo antes de editarlo**, no asumir su contenido
+- **Los archivos del repo son CRLF, y `sed`/`awk` con anclas `$` fallan en silencio** con CRLF. Usar
+  `{ sub(/\r$/, "") }` antes de aplicar cualquier ancla (ADR-015)
+- **`sed` y `awk` NO existen en PowerShell** (viven dentro de bash). Un comando con `sed` en
+  PowerShell falla con «no se reconoce como nombre de un cmdlet»
+- **`Select-String` desde PowerShell puede fallar al buscar texto con acentos** (codificación). Para
+  afirmaciones sobre contenido, verificar con `grep`/`od` dentro de bash
 
 ### De método (aprendido en esta sesión)
 
@@ -299,7 +368,7 @@ repos** y el gate **G4** de compatibilidad. Activa `sdd-security-reviewer`, **qu
 
 ---
 
-## 8. Patrón transversal del repositorio (5 ocurrencias)
+## 8. Patrón transversal del repositorio (**6 ocurrencias**)
 
 **Un dato crítico en copias que pueden divergir en silencio.** Es el hilo conductor de casi todos los ADR:
 
@@ -310,12 +379,14 @@ repos** y el gate **G4** de compatibilidad. Activa `sdd-security-reviewer`, **qu
 | 3 | Vínculos **agente ↔ skill** en prosa, sin check (3 de 8 incompletos) | 003 |
 | 4 | **Cinco versiones** del harness sin coordinación | 004 |
 | 5 | **Garantía aparente**: protección de rama inerte; un `SKIP` contado como `PASS` | 011 |
+| 6 | **Un check que no puede fallar**: `--check` comparaba el generado contra sí mismo mientras 5 de 6 adaptadores estaban sin procedimiento | 015 |
 
-**Dos lecciones transversales**:
+**Tres lecciones transversales**:
 - *Un validador que nunca ha fallado no ha demostrado nada.* → probar todo check con un fixture que
   deba fallar, y confirmar el código 1.
-- *Un límite es real cuando es **capacidad ausente**, no cuando es una instrucción.* → es lo que
-  justifica `harness-maintainer` (ADR-007) y la separación de identidades (ADR-011).
+- *Un límite es real cuando es **capacidad ausente**, no cuando es una instrucción.* → justifica
+  `harness-maintainer` (ADR-007) y la separación de identidades (ADR-011).
+- *Un check solo es real cuando **mira algo distinto de sí mismo**.* → ADR-015.
 
 ---
 
@@ -327,7 +398,7 @@ repos** y el gate **G4** de compatibilidad. Activa `sdd-security-reviewer`, **qu
 | [`docs/inicio-harness-sdd.md`](./inicio-harness-sdd.md) | Arranque general + **guía paso a paso** de las fases 0–7 |
 | [`docs/propuesta-harness-instanciable.md`](./propuesta-harness-instanciable.md) | Modelo de instanciación, decisiones D1–D3, abiertas A1–A7, anexos A3/A4 |
 | [`docs/desacoplamiento-arquitectura-software.md`](./desacoplamiento-arquitectura-software.md) | Diseño del eje de stack: `stack.md`, `template.yaml`, `agent_profile.md` |
-| [`.spec/_harness/ADR/README.md`](../.spec/_harness/ADR/README.md) | **Índice de los 14 ADR** |
+| [`.spec/_harness/ADR/README.md`](../.spec/_harness/ADR/README.md) | **Índice de los 15 ADR** |
 | `.spec/validator-runner/scope.md` | Feature **varada** con 5 supuestos abiertos (ver PENDIENTE 6) |
 
 ---
