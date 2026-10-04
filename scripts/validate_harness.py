@@ -69,6 +69,12 @@ VERSIONED_ARTIFACTS = {
 
 SEMVER = re.compile(r"^\d+\.\d+\.\d+$")
 
+# Nombre de ESTE repositorio, el que fabrica el harness. Lo usan dos controles para
+# detectar identidad heredada: un componente instanciado que conserve este nombre, o
+# un harness que se haya quedado con el de otro repositorio (ADR-018).
+HARNESS_REPO_NAME = "ai-harness-architecture"
+HARNESS_MARKER_PATHS = ("AGENTS.md", "harness.config.json", "init.sh", ".harness/harness.version")
+
 # El orquestador es el único rol cuya definición ES la skill: no tiene prompt
 # propio en .agents/agents/, así que se auto-consume y no puede ser huérfana.
 ORCHESTRATOR_SKILL = "sdd-orchestrator"
@@ -462,6 +468,60 @@ def check_permissions(report: Report, permissions: dict) -> None:
         report.error(
             "'sdd-verifier' declara rutas de escritura fuera de verify.md: "
             f"{', '.join(outside)}. Escribir código destruye la independencia"
+        )
+
+
+def check_repo_identity(report: Report) -> None:
+    """El nombre del repositorio debe ser el suyo, no el de otro (ADR-018).
+
+    Dos casos, los dos reales:
+      1. El harness declaro `deepseek-harness`, el nombre de OTRO repositorio. El instanciador
+         lee la identidad de aqui, asi que cada componente habria nacido con ese nombre.
+      2. Al instanciar, si el generador no reescribe `name`, el componente nuevo nace
+         llamandose `ai-harness-architecture` y su `AGENTS.md` generado hereda el error.
+
+    El caso 2 se detecta por una senal indirecta: un arbol con los artefactos del harness
+    pero sin su `.spec/_harness/` es un componente instanciado, no el harness.
+    """
+    path = ROOT / CONFIG_FILE
+    report.tick()
+    if not path.exists():
+        return
+
+    try:
+        cfg = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        report.error(f"{CONFIG_FILE} ilegible: {exc}")
+        return
+
+    name = str((cfg.get("repository") or {}).get("name") or "").strip()
+    report.tick()
+    if not name:
+        report.error(f"{CONFIG_FILE}: falta repository.name (el instanciador lo usa como identidad)")
+        return
+
+    # Senal indirecta: artefactos del harness pero sin su .spec/_harness/ => es un componente
+    looks_like_harness = all((ROOT / m).exists() for m in HARNESS_MARKER_PATHS)
+    is_the_harness = looks_like_harness and (ROOT / ".spec" / "_harness").exists()
+
+    report.tick()
+    if is_the_harness and name != HARNESS_REPO_NAME:
+        report.warn(
+            f"{CONFIG_FILE}: 'repository.name' es '{name}' y este arbol parece el harness "
+            f"(tiene .spec/_harness/). Se esperaba '{HARNESS_REPO_NAME}'. ¿Nombre heredado de otro repo?"
+        )
+    elif not is_the_harness and name == HARNESS_REPO_NAME:
+        report.error(
+            f"{CONFIG_FILE}: 'repository.name' sigue siendo '{HARNESS_REPO_NAME}', el nombre del "
+            "HARNESS. Este arbol parece un componente instanciado: el generador no reescribio la "
+            "identidad, y su AGENTS.md heredaria el nombre equivocado (ADR-018)"
+        )
+
+    schema = str(cfg.get("$schema") or "")
+    report.tick()
+    if schema.startswith("./") and not (ROOT / schema[2:]).exists():
+        report.warn(
+            f"{CONFIG_FILE}: '$schema' apunta a '{schema}', que no existe (referencia colgante)"
         )
 
 
@@ -974,6 +1034,7 @@ def validate(report: Report) -> None:
     check_permissions(report, permissions)
     check_role_tools_consistency(report, permissions)
     check_harness_maintainer_limits(report, permissions)
+    check_repo_identity(report)
     check_init_gate_integrity(report)
     check_law_rules(report)
     check_skills_referenced(report)
