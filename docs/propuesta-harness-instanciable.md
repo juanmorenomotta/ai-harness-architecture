@@ -99,7 +99,7 @@ flowchart TD
   end
 
   P["Humano: prompt de proyecto"] --> INST
-  HP --> INST["instanciar-harness<br/>fija versión · resuelve identidad<br/>limpia herencia"]
+  HP --> INST["instantiate_harness.py<br/>fija versión · resuelve identidad<br/>limpia herencia"]
 
   INST --> N2
 
@@ -275,7 +275,7 @@ análisis demostró que corresponde.
 genera un repositorio **sin historia compartida**; un fork la comparte, y lo que se busca es
 independencia.
 
-### Qué debe hacer `instanciar-harness`
+### Qué debe hacer `instantiate_harness.py`
 
 1. **Fijar la versión** del harness (semver o SHA), nunca "lo último".
 2. **Resolver identidad**: nombre del proyecto, remoto, ramas protegidas, idioma de la ley.
@@ -345,7 +345,7 @@ es posible anticipar sin correr el flujo (ver §10, paso 4).
 | **0** | Reclasificar `validator-runner` como chore del harness | Es una automatización de `scripts/`, no una feature de dominio. Su ceremonia de 5 supuestos abiertos no le corresponde |
 | **1** | **Activar el gate**: `.venv`, manifiesto, herramientas, remoto | Sin esto, nada de lo demás es verificable: el gate daría PASS sin comprobar |
 | **2** | **Versión única del harness** (D1) | Hace el harness instanciable de verdad |
-| **3** | **`instanciar-harness`** | Convierte el harness en reutilizable |
+| **3** | **`instantiate_harness.py`** | Convierte el harness en reutilizable |
 | **4** | **Primera aplicación real**, un solo componente, ciclo completo | Prueba las 4 fases end-to-end |
 | **5** | **Segunda aplicación de otro tipo** (frontend o segundo backend de otra tecnología) | Es lo que **revela el delta real** entre dominios. Sin esta evidencia no hay especialización que extraer (ADR-005) |
 | **6** | **Materializador de stack** (nivel 3) + templates | Multi-componente. Es donde vive la especialización por dominio |
@@ -439,7 +439,7 @@ mecanismo ya existen.**
 
 Con la opción (c), el drift se controla igual que ya se controla con los adaptadores: **un check que
 falla si el generado diverge**, con la misma forma que `sync-adapters.sh --check`. Es decir,
-`instanciar-harness --check` verificaría que el `AGENTS.md` del proyecto corresponde a la versión
+`instantiate_harness.py --check` verificaría que el `AGENTS.md` del proyecto corresponde a la versión
 declarada del harness.
 
 ### La separación conceptual que lo hace limpio

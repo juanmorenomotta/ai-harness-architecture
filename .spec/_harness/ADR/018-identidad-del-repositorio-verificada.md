@@ -28,7 +28,7 @@ parámetros). Y ADR-012 establece que el instanciador **lee la identidad de aqu�
 
 Por tanto, el campo es la **fuente de identidad de cada componente nuevo**. Con el valor equivocado,
 todo componente instanciado habría nacido con el nombre de otro repositorio, y su `AGENTS.md` generado
-habría heredado el error. Era **precondición del pendiente 3** (`scripts/instanciar-harness.py`).
+habría heredado el error. Era **precondición del pendiente 3** (`scripts/instantiate_harness.py`).
 
 ### Un segundo defecto, encontrado en el mismo sitio
 

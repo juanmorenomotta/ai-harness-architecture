@@ -80,7 +80,7 @@ versión, pero nadie actualizó el agregado». Sin él, el archivo sería docume
 ## Consecuencias
 
 **Positivas**
-- Existe **una** versión que un proyecto puede fijar (habilita `instanciar-harness` y su `--check`).
+- Existe **una** versión que un proyecto puede fijar (habilita `instantiate_harness.py` y su `--check`).
 - La divergencia entre las cinco versiones deja de ser silenciosa: pasa a ser un **error de gate**.
 - La política de incremento hace explícito qué merece bump mayor (la ley) y qué no.
 

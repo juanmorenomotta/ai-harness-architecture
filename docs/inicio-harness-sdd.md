@@ -4,11 +4,11 @@
 > exacto, qué está decidido, qué está bloqueado y cuál es el siguiente paso concreto.
 >
 > **Lista concreta de pendientes**: [`docs/pendientes.md`](./pendientes.md) — ayuda memoria de traspaso
-> con los 4 bloqueos, los 13 pendientes menores y las decisiones abiertas.
+> con los pendientes y las decisiones abiertas.
 >
-> **Última actualización**: 2026-09-28 · **Sesión cerrada en**: commit `eb9b60e`
-> **Estado global**: **14 ADR** aceptados · harness coherente (**94 checks**) · gate en PASS ·
-> remoto GitHub **creado** (2 commits por subir) · **0 componentes construidos**
+> **Última actualización**: 2026-10-04 · **Estado global**: **19 ADR** · harness coherente (**136 checks**)
+> · gate en PASS · remoto GitHub creado y sincronizado · **1 componente instanciado**
+> (`a:\proyectos\auth-service`), **0 features implementadas**.
 >
 > **Modelo vigente (ADR-012)**: **un solo nivel de instanciación — el repositorio.** Cada repo
 > instanciado es autosuficiente: ley + método + gate + `.spec/` + versión del harness. El contrato es
@@ -18,9 +18,10 @@
 
 ## 1. Resumen en una frase
 
-El **harness está terminado y verificado** en su capa de definición (roles, skills, políticas, gates,
-ADRs), pero **nunca se ha ejercitado con código real**: no hay ninguna aplicación, ningún `design.md`,
-ningún `tasks/` y ningún `verify.md`. El siguiente hito es **la primera aplicación de prueba**.
+El **harness está terminado, verificado y ya instanciado**: 19 ADR, 136 comprobaciones y un componente
+real creado en `a:\proyectos\auth-service`. Pero **ninguna feature se ha implementado todavía**: no hay
+`design.md`, ni `tasks/`, ni `verify.md` en ningún componente. El siguiente hito es **lanzar `sdd-init`
+en el componente** y recorrer el ciclo completo.
 
 ---
 
@@ -28,12 +29,12 @@ ningún `tasks/` y ningún `verify.md`. El siguiente hito es **la primera aplica
 
 | Comprobación | Resultado |
 | :--- | :--- |
-| Rama | `main` — último commit `eb9b60e` |
-| Remoto git | **`origin` → `github.com/juanmorenomotta/ai-harness-architecture`** (privado). **2 commits por subir** |
+| Rama | `main`, sincronizada con `origin/main` |
+| Remoto git | **`origin` → `github.com/juanmorenomotta/ai-harness-architecture`** (privado) |
 | Protección de `main` | **Creada pero INERTE** (repo privado + plan Free). Ver §4, hueco 2 |
-| `python scripts/validate_harness.py` | **94 comprobaciones, COHERENTE** (exit 0) |
+| `python scripts/validate_harness.py` | **136 comprobaciones, COHERENTE** (exit 0) |
 | `bash init.sh` | **PASS** (con `lint`/`format`/`typecheck`/`tests` en **SKIP**) |
-| ADRs | **14** (001–014), todos `aceptada`; 004–014 con **implementación pendiente** |
+| ADRs | **19** (001–019). Implementados: **004, 007, 015, 016, 017, 018, 019** |
 | Sin commitear | `.spec/validator-runner/`, `docs/desacoplamiento-arquitectura-software.md` (previos, deliberadamente fuera) |
 
 ### Herramientas del entorno
@@ -50,7 +51,7 @@ ningún `tasks/` y ningún `verify.md`. El siguiente hito es **la primera aplica
 
 ---
 
-## 3. Lo que está decidido (ADR-004 a ADR-014)
+## 3. Lo que está decidido (ADR-004 a ADR-019)
 
 | ADR | Decisión | Consecuencia práctica |
 | :--- | :--- | :--- |
@@ -59,6 +60,11 @@ ningún `tasks/` y ningún `verify.md`. El siguiente hito es **la primera aplica
 | **006** | El `AGENTS.md` de **cada repo instanciado** es **generado** (ley + parámetros) | Corrige que §4 de la ley describa `src/`; check de sincronización |
 | **007** | Rol nuevo **`harness-maintainer`**; `scripts/` cerrado al Developer | Desbloquea `validator-runner` **y** el materializador |
 | **008** | Ciclo SDD **completo para toda aplicación**, sin umbral de tamaño | Frontera por **naturaleza**, no por tamaño (verificable, R5) |
+| **015** | Los adaptadores llevan el **procedimiento del rol** (los 6; antes 5 no lo llevaban) | Se verifica **por contenido**, no comparando el generado consigo mismo |
+| **016** | El arranque en frío se consigue con **conversación nueva**, no con la selección de agente | **Una conversación por fase y por tarea** |
+| **017** | El maintainer puede **ampliar** el gate, no vaciarlo | `init.sh` y `harness.config.json` escribibles, con check de integridad |
+| **018** | La **identidad** del repositorio se declara y verifica | Dos severidades: aviso en el harness, error en un componente |
+| **019** | El **instanciador** extrae del propio árbol con `git archive` | Sin red ni credenciales; exige árbol limpio; modo `--check` |
 | **009** | Primer componente: **`auth-service`**, clase **`cross`**, Laravel 12 / PHP 8.2 + consumidor frontend Vue | Ver §5: tiene un **bloqueo** |
 | **010** | **Remoto privado en GitHub** | Habilita R3 y G3 |
 | **011** | **G3 es revisión humana LOCAL**; la protección de rama es **inerte** | Ver §4: R3 no es control técnico |
@@ -80,7 +86,11 @@ Los ADR están en `.spec/_harness/ADR/` y el índice en `ADR/README.md`.
 
 ---
 
-## 4. Los tres huecos que impiden avanzar (medidos)
+## 4. Huecos detectados (medidos)
+
+Los tres huecos originales están **resueltos o desbloqueados**: el gate sin rama PHP (pendiente 5,
+pendiente de código real), R3 como regla de proceso (ADR-011) y `scripts/` sin rol que lo escriba
+(ADR-007/017). Se conservan aquí como registro de lo que reveló cada uno.
 
 ### Hueco 1 — El gate está inerte para PHP (el más importante)
 
@@ -130,44 +140,35 @@ Necesario para `validator-runner` y para el materializador de nivel 3.
 
 ---
 
-## 5. Bloqueo real para arrancar (corregido 2026-09-28)
+## 5. Estado de los bloqueos (actualizado 2026-10-04)
 
-Una versión anterior de esta sección decía que el único bloqueo era el **orden entre el SDD y el gate
-PHP**. Estaba incompleto: **falta una pieza entera del harness.**
-
-### La cadena de bloqueos
-
-`instanciar-harness` **no existe** (verificado: `scripts/` solo tiene `diagnose_harness.py`,
-`harness_yaml.py`, `sync-adapters.sh` y `validate_harness.py`). Y sin él **no se puede crear el
-repositorio del componente**, así que las fases del SDD no tienen dónde escribir.
+**Los cuatro eslabones están resueltos.** El flujo SDD ya es ejecutable.
 
 ```mermaid
 flowchart LR
-  A["1. Rol harness-maintainer<br/>(ADR-007) NO existe"] --> B
-  B["2. Sin rol, nadie implementa<br/>instanciar-harness"] --> C
-  C["3. Sin instanciador, no existe<br/>el repo del componente"] --> D
-  D["4. Sin componente, sdd-init<br/>no tiene dónde escribir"]
+  A["1. Rol harness-maintainer<br/>(ADR-007)"] --> B
+  B["2. instantiate_harness.py<br/>(ADR-006/019)"] --> C
+  C["3. Instanciar el componente<br/>(ADR-012)"] --> D
+  D["4. sdd-init en su .spec/<br/>(ADR-016: conversación nueva)"]
 ```
 
-| # | Bloqueo | Evidencia |
+| # | Eslabón | Estado |
 | :--- | :--- | :--- |
-| 1 | **`harness-maintainer` no existe** | Sin `.agents/agents/harness-maintainer.md` ni entrada en `permissions.yaml` |
-| 2 | **`instanciar-harness` no existe** | `scripts/` tiene 4 archivos, ninguno es el instanciador |
-| 3 | **Sin instanciador no hay componente** | Y sin componente, `.spec/` no tiene dueño |
-| 4 | **La rama PHP del gate** | Hueco 1 de §4; necesario para la verificación real |
+| 1 | Rol `harness-maintainer` | ✅ **RESUELTO** (2026-10-04, ADR-007/017) |
+| 2 | `scripts/instantiate_harness.py` | ✅ **RESUELTO** (2026-10-04, ADR-019) |
+| 3 | Repositorio del componente | ✅ **HECHO**: `a:\proyectos\auth-service` |
+| 4 | `sdd-init` escribiendo `scope.md` | ▶️ **SIGUIENTE** — en conversación nueva |
 
-**ADR-006 lo advirtió**: *«`instanciar-harness` necesita un generador y su modo `--check`. Es trabajo
-real, no un envoltorio.»*
+### El orden correcto
 
-### El orden correcto (corregido)
-
-| Orden | Qué | Por qué ahí |
+| Orden | Qué | Estado |
 | :--- | :--- | :--- |
-| **1º** | **Rol `harness-maintainer`** (ADR-007) | Sin rol, nadie puede escribir en `scripts/` |
-| **2º** | **`instanciar-harness`** (ADR-006) + versión única (ADR-004) | Es lo que crea el componente con identidad propia |
-| **3º** | **Instanciar `auth-service`** | Ya existe el repositorio del componente |
-| **4º** | **SDD del componente** (fases 1–7 de §7) | Con `.spec/` en su sitio |
-| **5º** | **Rama PHP del gate** | Cuando exista código Laravel real que verificar |
+| **1º** | **Rol `harness-maintainer`** (ADR-007) | ✅ Hecho |
+| **2º** | **`instantiate_harness.py`** (ADR-006/019) + versión única (ADR-004) | ✅ Hecho |
+| **3º** | **Instanciar `auth-service`** | ✅ Hecho en `a:\proyectos\auth-service` |
+| **4º** | **SDD del componente** (fases 1–7 de §7) | ▶️ Siguiente |
+| **5º** | **Rama PHP del gate** | Pendiente, cuando exista código Laravel |
+
 
 > **Sobre el gate PHP**: la recomendación no cambia — escribirlo **cuando exista el proyecto Laravel**,
 > porque no se puede hacer bien sin ver un `composer.json` real. Lo que cambia es que **ya no es el
@@ -280,7 +281,7 @@ pasos con 👤 son tuyos y no los puede hacer un agente (gates humanos y operaci
 > artefactos de un componente **no** se escriben en el repositorio del harness. La guía corregida
 > empieza por **instanciar el componente**.
 >
-> **Y ese paso aún no es ejecutable**: `scripts/instanciar-harness` **no existe**. Ver §12 y §11.
+> **Y ese paso ya es ejecutable**: `scripts/instantiate_harness.py` existe (ADR-019). Ver §12 y §11.
 
 ### Dónde vive cada cosa (antes de empezar)
 
@@ -298,41 +299,36 @@ a:\proyectos\auth-service\                         ← EL COMPONENTE (repo nuevo
 
 ---
 
-### Fase 0 — Instanciar el componente (⚠️ BLOQUEADO: el instanciador no existe)
+### Fase 0 — Instanciar el componente — ✅ **HECHO 2026-10-04**
 
-👤 **Paso 0.1 — Subir los commits pendientes del harness.**
+👤 **Paso 0.1 — El componente ya existe** en `a:\proyectos\auth-service`. No hay que crearlo.
+
+Si necesitas crear **otro** componente (o rehacer este), el comando es:
+
 ```bash
 cd a:\jmm\libros\AI-First\ai-harness-architecture
-git push origin main
+python scripts/instantiate_harness.py \
+    --name <nombre-componente> \
+    --target a:\proyectos\<nombre-componente>
 ```
 
-👤 **Paso 0.2 — Instanciar el harness para crear el componente.** Debe producir un **repositorio
-nuevo** y autosuficiente:
+> **Nota**: el script se llama **`instantiate_harness.py`** y no recibe `--harness-version`: lee la
+> versión y el commit **del propio árbol** (ADR-019, opción D de D-1). Exige que no haya cambios
+> **rastreados** sin commitear.
+
+Para comprobar que una instancia sigue coherente:
+
 ```bash
-# AÚN NO IMPLEMENTADO — este es el paso que falta (ADR-006, paso 3 del orden)
-python scripts/instanciar-harness.py \
-    --name auth-service \
-    --target a:\proyectos\auth-service \
-    --harness-version <versión fijada>
+python scripts/instantiate_harness.py --check a:\proyectos\auth-service
 ```
 
-Resultado esperado:
-```
-a:\proyectos\auth-service\
-  AGENTS.md            ← GENERADO: ley base + parámetros del componente ("NO EDITAR A MANO")
-  harness.config.json  ← con name: auth-service
-  init.sh              ← el gate del componente
-  .harness/  .agents/  .github/agents/
-  .gitignore
-  .spec/               ← VACÍO: aquí van SUS artefactos
-  .git/                ← SU propia historia, no la del harness
-```
-
-✅ **Verificar**: `cd a:\proyectos\auth-service && git log --oneline` muestra **su** primer commit,
-`python scripts/validate_harness.py` pasa, y `bash init.sh` da PASS.
+✅ **Verificado el 2026-10-04**: el componente tiene identidad propia (`name: auth-service`), `.spec/`
+vacío, historia git propia y su propio validador en **COHERENTE (136 comprobaciones)** con el gate en
+**PASS (exit 0)** — sin consultar el harness. `--check` da **INSTANCIA COHERENTE**.
 
 > **Por qué no basta con copiar la carpeta**: el componente necesita **identidad propia** (nombre,
-> ramas, rutas) y **versión fijada del harness** para poder actualizarse después (ADR-004, ADR-006).
+> ramas, rutas) y **procedencia registrada** (versión + commit del harness) para poder actualizarse
+> después (ADR-004, ADR-006, ADR-019).
 
 ---
 
@@ -586,7 +582,7 @@ divergen en silencio**.
 | **1** | **Activar el gate**: rama PHP en `init.sh` (el **remoto git ya está hecho**) | **Bloquea la verificación real** |
 | **1b** | **Separar identidades** agente/humano (PAT o GitHub App de menor privilegio) → R3 pasa a ser control técnico (ADR-011) | **Deuda registrada**; no bloquea la primera prueba |
 | **2** | **Versión única del harness** (ADR-004) | Decidido, sin implementar |
-| **3** | **`instanciar-harness`** (ADR-006) | Decidido, sin implementar |
+| **3** | **`instantiate_harness.py`** (ADR-006/019) | ✅ Hecho |
 | **4** | **Primera aplicación**: auth Laravel 12 → **AQUÍ ESTAMOS** | Listo para arrancar |
 | **5** | **Segunda aplicación de otro tipo** — revela el delta real entre dominios | Futuro |
 | **6** | **Materializador de stack** (nivel 3) + templates | Futuro |
@@ -602,15 +598,27 @@ divergen en silencio**.
 **El paso 4 del orden NO es ejecutable todavía.** Antes hay que crear la pieza que falta.
 
 ```
-1. [HECHO]  Remoto privado, push realizado, protección de rama (inerte, ADR-011)
-2. [HECHO]  ADR-012/013/014 y arreglo de los 3 roles bloqueados
-3. PENDIENTE Rol `harness-maintainer` (ADR-007)              ← habilita escribir en scripts/
-4. PENDIENTE `scripts/instanciar-harness` (ADR-006) + versión única (ADR-004)
-5. PENDIENTE Instanciar `auth-service` en su propio repo      ← CREA el componente
-6. PENDIENTE SDD del componente: fases 1–7 de §7              ← aquí sí: sdd-init, G1, ...
+1. [HECHO]  Remoto privado, push y protección de rama (inerte, ADR-011)
+2. [HECHO]  ADR-012 a ADR-019: arreglo de roles, adaptadores, identidad, gate y instanciador
+3. [HECHO]  Rol `harness-maintainer` (ADR-007/017)
+4. [HECHO]  `scripts/instantiate_harness.py` + versión única (ADR-004, ADR-019)
+5. [HECHO]  Instanciar `auth-service` en `a:\proyectos\auth-service`
+6. SIGUIENTE  SDD del componente: fases 1–7 de §7   ← sdd-init, G1, G2, implementar, G3
 ```
 
-Cada uno de los pasos 3–5 es **PR de harness** (R4) y **la apruebas tú**.
+**Ya no queda ningún bloqueo de harness.** El siguiente paso es de uso, no de construcción.
+
+### Para el paso 6
+
+```bash
+code a:\proyectos\auth-service        # abrir VS Code EN EL COMPONENTE, no en el harness
+```
+
+Después, en **conversación nueva** (ADR-016): seleccionar `sdd-init` y pegar el prompt de §7, Fase 1.
+
+**Lo que esperar**: `scope.md` con criterios verificables. Después lo revisas y apruebas **G1** tú
+escribiendo `Aprobado por:`. La deuda conocida es que el gate reportará `lint`/`tests` en **SKIP**
+(no hay código) y los checks de PHP hasta el pendiente 5.
 
 > **Nota sobre el slug**: el repo es `auth-service` y la feature del primer corte es `auth-core`.
 > Si ambos se llamaran igual, la ruta sería redundante (`auth-service/.spec/auth-service/`).

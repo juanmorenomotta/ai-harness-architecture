@@ -11,7 +11,7 @@
 ## Contexto
 
 ADR-006 decidió que **el `AGENTS.md` de cada repositorio instanciado se genera** desde (ley base +
-parámetros), y que el drift se controla con un `instanciar-harness --check`. Pero no fijó **de dónde
+parámetros), y que el drift se controla con un modo `--check`. Pero no fijó **de dónde
 toma el harness base**, y esa era la decisión abierta **D-1**.
 
 ### Por qué no vale clonar
@@ -25,9 +25,11 @@ La recomendación inicial fue clonar por tag (opción B). Al verificarla se desc
 
 ### El nombre del script
 
-`docs/pendientes.md` lo llamaba `instanciar-harness.py` (español). `AGENTS.md` §3 exige identificadores
-en **inglés**, y los scripts existentes lo cumplen (`validate_harness.py`, `sync-adapters.sh`,
-`diagnose_harness.py`). Se adopta **`instantiate_harness.py`** y se corrigen las referencias.
+`docs/pendientes.md` y los ADR anteriores lo llamaban `instanciar-harness.py` (español). `AGENTS.md` §3
+exige identificadores en **inglés**, y los scripts existentes lo cumplen (`validate_harness.py`,
+`sync-adapters.sh`, `diagnose_harness.py`). Se adopta **`instantiate_harness.py`** y se corrigen las
+referencias **operativas** de todos los documentos. Las menciones que describen el nombre antiguo se
+conservan: documentan la divergencia corregida, que es información útil.
 
 ## Decisión
 

@@ -116,7 +116,7 @@ saber **qué hay que re-instanciar**. No es un nivel de la arquitectura ni se co
   en arranque en frío.
 - **R2, el scope check y G3 pasan a ser ejecutables**: la tarea, su commit y su verificación viven en
   el mismo repositorio.
-- `instanciar-harness` se simplifica: instancia **un repo**, sin ambigüedad de nivel.
+- `instantiate_harness.py` se simplifica: instancia **un repo**, sin ambigüedad de nivel.
 - El contrato **no se duplica**: es del proveedor y el consumidor lo referencia con pin.
 
 **Negativas / deuda asumida**

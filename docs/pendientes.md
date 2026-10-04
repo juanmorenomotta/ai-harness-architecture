@@ -43,7 +43,7 @@ bash init.sh
 ```mermaid
 flowchart LR
   A["1. Rol harness-maintainer<br/>(ADR-007)"] --> B
-  B["2. instanciar-harness.py<br/>(ADR-006) NO existe"] --> C
+  B["2. instantiate_harness.py<br/>(ADR-006/019)"] --> C
   C["3. Sin instanciador no existe<br/>el repo del componente"] --> D
   D["4. Sin componente, sdd-init<br/>no tiene dónde escribir"]
 ```
@@ -51,7 +51,7 @@ flowchart LR
 | # | Eslabón | Estado |
 | :--- | :--- | :--- |
 | 1 | Rol `harness-maintainer` | ✅ **RESUELTO** (2026-10-04, ADR-007) |
-| 2 | `scripts/instanciar-harness.py` | ❌ **NO existe** — bloqueado por **D-1** |
+| 2 | `scripts/instantiate_harness.py` | ✅ **HECHO 2026-10-04** (ADR-019) |
 | 3 | Repo del componente | ❌ Depende del eslabón 2 |
 | 4 | `sdd-init` escribiendo `scope.md` | ❌ Depende del eslabón 3 |
 
@@ -231,7 +231,7 @@ a:\proyectos\auth-service\
 
 **Interfaz propuesta**:
 ```bash
-python scripts/instanciar-harness.py \
+python scripts/instantiate_harness.py \
     --name auth-service \
     --target a:\proyectos\auth-service \
     --harness-version 1.0.0
@@ -367,7 +367,7 @@ Nota sobre **D-1**: con la versión `1.0.0` ya creada (ADR-004), la opción **B*
 1. Decidir D-1 (origen del harness base)          ← desbloquea el pendiente 3
 2. Decidir D-4 (alcance a init.sh/config.json)    ← desbloquea 5, 9 y 11
    (el 11 es precondicion del 3: la identidad vive en harness.config.json)
-3. Implementar PENDIENTE 3: scripts/instanciar-harness.py
+3. [HECHO] PENDIENTE 3: scripts/instantiate_harness.py
 4. PENDIENTE 4: instanciar auth-service en a:\proyectos\auth-service
 5. Ahora si: lanzar `sdd-init` EN CONVERSACION NUEVA (ADR-016)
    (guia completa en inicio-harness-sdd.md §7)
