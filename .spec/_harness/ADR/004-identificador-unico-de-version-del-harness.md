@@ -1,7 +1,7 @@
 # ADR-004 — Identificador único de versión del harness
 
 - **Fecha**: 2026-09-27
-- **Estado**: `aceptada` · **Implementación**: **PENDIENTE**
+- **Estado**: `aceptada` · **Implementación**: **HECHA 2026-10-04** (pendiente de revisión humana)
 - **Decisor**: Juan Moreno (responsable del harness)
 - **Feature**: `_harness`
 - **Cierra**: decisión abierta **A1** de `docs/propuesta-harness-instanciable.md`
@@ -113,3 +113,21 @@ Eliminar `.harness/harness.version` y retirar el check del validador. Se vuelve 
 - `docs/propuesta-harness-instanciable.md` §2 (el problema medido), §5 D1, §11 A1
 - ADR-001 y ADR-003 de este directorio (mismo patrón: dato duplicado sin check)
 - `scripts/validate_harness.py`, `.harness/*.yaml`, `AGENTS.md`, `harness.config.json`
+
+## Implementación (2026-10-04)
+
+Creado `.harness/harness.version` con `harness: "1.0.0"` y las cinco entradas de `declared`, y anadido
+`check_harness_version()` a `scripts/validate_harness.py` (123 comprobaciones, era 116).
+
+**Tres pruebas negativas ejecutadas**, cada una con codigo de salida 1 y mensaje que senala el
+artefacto concreto, revirtiendo el fixture despues:
+
+| Fixture | Resultado |
+| :--- | :--- |
+| `.harness/models.yaml` a `9.9.9` sin tocar el manifiesto | `declara la version 9.9.9, pero .harness/harness.version dice 1.3.0 para 'models'` |
+| `harness: "1.0"` (semver invalido) | `'harness: 1.0' no es semver valido (MAJOR.MINOR.PATCH)` |
+| Quitar `routing` de `declared` | `'declared' no incluye 'routing' (.harness/routing.yaml)` |
+
+**Nota de alcance**: el manifiesto declara las versiones de los cinco artefactos, pero **no** incluye
+`AGENTS.md` en el alcance de escritura de ningun rol (R4): subir la version del contrato sigue siendo
+un acto humano. Verificado: `init.sh` en PASS y `sync-adapters.sh --check` sin desincronizacion.
