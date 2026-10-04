@@ -139,7 +139,10 @@ def extract(target: Path) -> None:
     target.mkdir(parents=True, exist_ok=True)
 
     extracted = subprocess.run(
-        ["tar", "-x", "-C", str(target)], input=archive.stdout, capture_output=True, check=False
+        ["tar", "-x", "-f", "-", "-C", str(target)],
+        input=archive.stdout,
+        capture_output=True,
+        check=False,
     )
     if extracted.returncode != 0:
         shutil.rmtree(target, ignore_errors=True)
