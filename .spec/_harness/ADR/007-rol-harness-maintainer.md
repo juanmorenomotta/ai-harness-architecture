@@ -1,7 +1,7 @@
 # ADR-007 — Rol `harness-maintainer`; `scripts/` no es escribible por el Developer
 
 - **Fecha**: 2026-09-27
-- **Estado**: `aceptada` · **Implementación**: **PENDIENTE**
+- **Estado**: `aceptada` · **Implementación**: **HECHA 2026-10-04** (ver "Implementación" al final)
 - **Decisor**: Juan Moreno (responsable del harness)
 - **Co-firma**: **Juan Moreno, Tech Lead humano** (los roles pueden coincidir en la misma persona; lo
   que la ley prohíbe es que un **agente** apruebe un cambio de governance)
@@ -135,3 +135,29 @@ por humanos para el harness. Los artefactos que haya producido quedan intactos.
 - `AGENTS.md` §1 R4 (no modificar el harness para hacer pasar una tarea), R7, §7 (gates)
 - `.agents/policies/permissions.yaml` (modelo deny-first), `.agents/agents/sdd-developer.md`
 - ADR-008 de este directorio (modo ligero, que este rol reutiliza)
+
+## Implementación (2026-10-04)
+
+Hecha en una rama de harness, pendiente de la revisión humana que exige R4. El rol queda con modelo
+`gpt-5.3-codex` (fallback `claude-sonnet-5`) y `models.yaml` pasa de 1.2.0 a 1.3.0 (rol nuevo = minor,
+según la política de ADR-004).
+
+**Dos desviaciones respecto a lo decidido arriba, a aprobar explícitamente:**
+
+1. **`global_deny.paths` exigía una excepción.** Prohibía `.harness/**` y `.agents/**` a *todos* los
+   roles "sin excepción", de modo que el `writable_paths` de este rol se contradecía con la política
+   global. Se añadió `except_roles: [harness-maintainer]` **solo** a esas dos rutas; `AGENTS.md`,
+   `.github/workflows/**` y el resto siguen denegadas a todos.
+2. **`protected_paths` incluye también `init.sh` y `harness.config.json`**, que la decisión original
+   no mencionaba. Son el gate y la configuración de guardrails: darle escritura sobre ellos amplía el
+   alcance de ADR-007 y es una decisión humana. Consecuencia: la rama PHP de `init.sh` y el gate G4 en
+   `harness.config.json` (ADR-009, ADR-013) **no podrá hacerlos este rol** hasta que se decida.
+
+**Verificación realizada**: `validate_harness.py` 94 → 116 comprobaciones, coherente; adaptadores
+sincronizados; y tres pruebas negativas con código de salida 1 (el Developer declarando `scripts/**`,
+el maintainer con `AGENTS.md` escribible, y la excepción global ampliada a otro rol).
+
+**Defectos preexistentes corregidos en la misma PR** porque tocaban `scripts/`: la dimensión 4 de
+`diagnose_harness.py` exigía `deny: edit` para el Verifier (lo contrario de lo correcto desde la
+corrección del 2026-09-28) y bajaba el diagnóstico a 3/4; y `validate_harness.py` tenía una constante
+duplicada.

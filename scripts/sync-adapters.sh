@@ -383,6 +383,7 @@ copilot_tools_for() {
     sdd-security-reviewer)                        echo "['read', 'search', 'todo']" ;;
     sdd-verifier)                                 echo "['read', 'edit', 'search', 'execute', 'todo']" ;;
     sdd-developer)                                echo "['read', 'search', 'edit', 'execute', 'todo']" ;;
+    harness-maintainer)                           echo "['read', 'search', 'edit', 'execute', 'todo']" ;;
     *)                                            echo "['read', 'search']" ;;
   esac
 }

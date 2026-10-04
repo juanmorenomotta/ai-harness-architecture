@@ -48,7 +48,7 @@
 #   .env.harness               -> variables para orquestadores propios (CAO, etc.)
 # ---------------------------------------------------------------------------
 
-version: "1.2.0"
+version: "1.3.0"
 
 defaults:
   reasoning: "medium"
@@ -116,6 +116,16 @@ roles:
     temperature: 0.0
     rationale: "Razonamiento adversario sobre el diff; temperatura 0 para reproducibilidad."
     fallback: ["gpt-5.6-terra"]
+
+  # --- Harness maintenance (ADR-007) --------------------------------------
+  # Escribe scripts y configuracion del harness; su diff siempre lo revisa un humano.
+  harness-maintainer:
+    model: "gpt-5.3-codex"
+    runtime: "copilot"
+    reasoning: "medium"
+    temperature: 0.1
+    rationale: "Cambios acotados y ya especificados en un ADR: modelo especializado en codigo."
+    fallback: ["claude-sonnet-5"]
 
 tiers:
   # Nivel 1 del harness: mínimo viable. Un modelo por rol, sin enrutamiento dinámico.

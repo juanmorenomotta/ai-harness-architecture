@@ -64,7 +64,7 @@ harness.config.json           Comandos detectados, gates, guardrails
 init.sh                       Gate único de verificación
 .spec/                        Artefactos SDD (por feature)
 .agents/
-  ├── agents/                 5 roles: init, tech-lead, developer, verifier, security
+  ├── agents/                 6 roles: init, tech-lead, developer, verifier, security, harness-maintainer
   ├── skills/                 7 skills de Nivel 1
   └── policies/               Permisos deny-first + gates humanos
 .harness/

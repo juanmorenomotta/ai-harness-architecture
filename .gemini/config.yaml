@@ -5,6 +5,10 @@ version: "1.0.0"
 # Antigravity razona por tiers (flash/pro), no por nombre exacto de modelo.
 # El tier se deriva del campo 'reasoning' de models.yaml.
 agents:
+  harness-maintainer:
+    tier: "flash"
+    model_hint: "gpt-5.3-codex"   # informativo; el motor usa el tier
+    provider: ""
   sdd-developer:
     tier: "flash"
     model_hint: "gpt-5.3-codex"   # informativo; el motor usa el tier

@@ -71,7 +71,12 @@ a:\proyectos\auth-service\                         ← EL COMPONENTE (repo nuevo
 
 ## 3. Los 4 pendientes, en orden de dependencia
 
-### PENDIENTE 1 — Rol `harness-maintainer` (ADR-007)
+### PENDIENTE 1 — Rol `harness-maintainer` (ADR-007) — ✅ HECHO 2026-10-04, pendiente de revisión humana
+
+Implementado: prompt, política, `models.yaml` (1.3.0), `EXPECTED_ROLES` y adaptadores; validador 94 → 116
+comprobaciones con tres pruebas negativas. **Dos desviaciones a aprobar** (excepción en `global_deny` y
+`protected_paths` con `init.sh`/`harness.config.json`): ver «Implementación» en ADR-007. La descripción
+original se conserva debajo como contexto.
 
 **Para qué**: hoy **ningún rol puede escribir en `scripts/`**. `sdd-developer` solo tiene
 `src/`, `tests/`, `lib/`, `app/`. Sin este rol, el PENDIENTE 3 es imposible.
