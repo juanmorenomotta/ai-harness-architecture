@@ -153,6 +153,12 @@ según la política de ADR-004).
    alcance de ADR-007 y es una decisión humana. Consecuencia: la rama PHP de `init.sh` y el gate G4 en
    `harness.config.json` (ADR-009, ADR-013) **no podrá hacerlos este rol** hasta que se decida.
 
+   > **Actualización 2026-10-04 (ADR-017)**: esa decisión se revirtió. `init.sh` y `harness.config.json`
+   > pasan a ser **escribibles** por el rol, porque bloqueaban los pendientes 5, 9 y 11 (el 11 era
+   > precondición del instanciador). La garantía se conserva por otra via: el validador comprueba que
+   > `init.sh` **conserve sus comprobaciones obligatorias**, de modo que el gate se puede ampliar pero
+   > no vaciar. `AGENTS.md` y CI siguen protegidos.
+
 **Verificación realizada**: `validate_harness.py` 94 → 116 comprobaciones, coherente; adaptadores
 sincronizados; y tres pruebas negativas con código de salida 1 (el Developer declarando `scripts/**`,
 el maintainer con `AGENTS.md` escribible, y la excepción global ampliada a otro rol).

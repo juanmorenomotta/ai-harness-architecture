@@ -83,6 +83,23 @@ MODEL_SCOPED_SKILLS = {"model-switching"}
 # Se eximen del check de `edit` porque escribir no es su trabajo, no por olvido.
 ROLES_WITHOUT_OWN_ARTIFACT = {"sdd-security-reviewer"}
 
+# Compromisos que init.sh DEBE conservar. Es el unico gate (R6), y desde 2026-10-04 el
+# rol harness-maintainer puede escribir en el (ADR-017). Este check compensa el permiso:
+# el archivo es escribible, pero no se puede vaciar en silencio.
+INIT_SH_REQUIRED_CHECKS = (
+    "secrets",
+    "lint",
+    "format",
+    "typecheck",
+    "tests",
+    "harness",
+    "guardrails",
+)
+
+# Rutas que cada rol debe seguir teniendo vetadas, y en cual. Se comprueba que siguen
+# protegidas tras ampliar el alcance del maintainer.
+ALWAYS_PROTECTED_FOR_MAINTAINER = ("AGENTS.md", ".github/workflows/**")
+
 MAINTAINER_ROLE = "harness-maintainer"
 
 # Solo el maintainer puede escribir aqui; ningun otro rol puede declararlo.
@@ -90,7 +107,6 @@ HARNESS_WRITE_PREFIXES = ("scripts/", ".harness/", ".agents/")
 
 # Ni siquiera el maintainer puede escribir la ley ni CI (ADR-007).
 LAW_PATHS_NEVER_WRITABLE = ("AGENTS.md", ".github/workflows/**")
-
 # Unicas rutas de global_deny que admiten una excepcion, y solo para el maintainer.
 MAINTAINER_EXCEPTION_PATTERNS = {".harness/**", ".agents/**"}
 
@@ -447,6 +463,39 @@ def check_permissions(report: Report, permissions: dict) -> None:
             "'sdd-verifier' declara rutas de escritura fuera de verify.md: "
             f"{', '.join(outside)}. Escribir código destruye la independencia"
         )
+
+
+def check_init_gate_integrity(report: Report) -> None:
+    """init.sh es el unico gate (R6): debe conservar sus comprobaciones obligatorias.
+
+    Desde ADR-017 el rol `harness-maintainer` PUEDE escribir en init.sh (es la unica forma
+    de anadirle ramas de stack que el desconocia, como la de PHP). Ese permiso podria usarse
+    para VACIAR el gate en lugar de ampliarlo, que es lo que R6 prohibe.
+
+    Este check convierte esa garantia en mecanismo: el archivo es modificable, pero no puede
+    perder ninguna de sus comprobaciones. Mismo principio que ADR-015: el check mira algo
+    distinto de si mismo.
+    """
+    path = ROOT / "init.sh"
+    report.tick()
+    if not path.exists():
+        report.error("falta init.sh: es el unico gate del harness (R6)")
+        return
+
+    text = path.read_text(encoding="utf-8")
+
+    for check in INIT_SH_REQUIRED_CHECKS:
+        report.tick()
+        if not re.search(rf'\brecord\s+"{re.escape(check)}"', text):
+            report.error(
+                f"init.sh: no declara la comprobacion obligatoria '{check}' (R6). "
+                "El gate no puede perder checks: si hay que anadir, se anade; si hay que "
+                "desactivar, se escala a un humano"
+            )
+
+    report.tick()
+    if "exit" not in text:
+        report.error("init.sh no termina con un codigo de salida: el gate debe poder fallar")
 
 
 def check_harness_maintainer_limits(report: Report, permissions: dict) -> None:
@@ -925,6 +974,7 @@ def validate(report: Report) -> None:
     check_permissions(report, permissions)
     check_role_tools_consistency(report, permissions)
     check_harness_maintainer_limits(report, permissions)
+    check_init_gate_integrity(report)
     check_law_rules(report)
     check_skills_referenced(report)
     check_adapters_synced(report, roles_cfg, alias_block)

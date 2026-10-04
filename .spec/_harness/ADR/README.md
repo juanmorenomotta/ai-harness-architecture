@@ -21,6 +21,7 @@ cambia, se escribe uno nuevo y el anterior pasa a `reemplazada por ADR-NNN`.
 | [014](./014-contribucion-externa-y-g4.md) | Contribución externa: `contrib/<change-id>` y la regla del «mismo humano en dos sombreros» | `aceptada` (impl. pendiente) | 2026-09-28 |
 | [015](./015-adaptadores-llevan-el-procedimiento-del-rol.md) | Los adaptadores llevan el procedimiento del rol, verificado por contenido | `aceptada` (impl. hecha 2026-10-04) | 2026-10-04 |
 | [016](./016-arranque-en-frio-conversacion-nueva.md) | El arranque en frío se consigue con **conversación nueva**, no con la selección de agente | `aceptada` (impl. hecha 2026-10-04) | 2026-10-04 |
+| [017](./017-el-maintainer-amplia-el-gate-no-lo-vacia.md) | El maintainer puede **ampliar** el gate, no vaciarlo (alcance + check de integridad) | `aceptada` (impl. hecha 2026-10-04) | 2026-10-04 |
 
 > Los ADR 004–010 responden a las decisiones abiertas **A1–A7** de
 > [`docs/propuesta-harness-instanciable.md`](../../../docs/propuesta-harness-instanciable.md).
