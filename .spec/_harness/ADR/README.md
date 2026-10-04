@@ -19,6 +19,7 @@ cambia, se escribe uno nuevo y el anterior pasa a `reemplazada por ADR-NNN`.
 | [012](./012-un-nivel-el-repositorio.md) | **Un solo nivel de instanciación**: el repositorio es la unidad de mantenimiento | `aceptada` (impl. pendiente) | 2026-09-28 |
 | [013](./013-componentes-cross-ownership-y-gates.md) | Componentes **cross**: ownership declarado, contrato versionado y gate **G4** | `aceptada` (impl. pendiente) | 2026-09-28 |
 | [014](./014-contribucion-externa-y-g4.md) | Contribución externa: `contrib/<change-id>` y la regla del «mismo humano en dos sombreros» | `aceptada` (impl. pendiente) | 2026-09-28 |
+| [015](./015-adaptadores-llevan-el-procedimiento-del-rol.md) | Los adaptadores llevan el procedimiento del rol, verificado por contenido | `aceptada` (impl. hecha 2026-10-04) | 2026-10-04 |
 
 > Los ADR 004–010 responden a las decisiones abiertas **A1–A7** de
 > [`docs/propuesta-harness-instanciable.md`](../../../docs/propuesta-harness-instanciable.md).
@@ -52,6 +53,11 @@ registrados porque son fáciles de repetir:
    efectiva frente a un agente que comparte credenciales con el humano. Es la variante del mismo
    patrón aplicada a una garantía en lugar de a un dato: **un check en `SKIP` no es un `PASS`; una
    regla inerte no es una protección**. → ADR-011.
+
+6. **Un check que no puede fallar.** `sync-adapters.sh --check` comparaba la salida del generador
+   contra la salida del generador, así que respondía «sincronizados» mientras 5 de los 6 adaptadores
+   de Copilot estaban **sin el procedimiento de su rol** (un `sed` frágil ante CRLF). Un check solo es
+   real cuando **mira algo distinto de sí mismo**. → ADR-015.
 
 La lección transversal: **un validador que nunca ha fallado no ha demostrado nada**, y **un límite es
 real cuando es capacidad ausente, no cuando es una instrucción**. Por eso

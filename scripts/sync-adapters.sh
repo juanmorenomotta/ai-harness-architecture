@@ -51,6 +51,22 @@ extract_description() { # archivo
   ' "$1" 2>/dev/null
 }
 
+# Extrae el cuerpo del prompt de rol, sin su frontmatter YAML.
+#
+# DEBE tolerar CRLF: los archivos del repo conviven con LF y CRLF (Windows), y el
+# `sed '1,/^---$/d'` anterior fallaba en silencio con CRLF (la linea es `---\r`, no
+# casa `^---$`) y devolvia solo la primera linea. Resultado: 5 de los 6 adaptadores
+# de Copilot quedaron SIN el procedimiento de su rol, con `--check` diciendo
+# "sincronizados" porque comparaba el generado contra si mismo.
+extract_body() { # archivo
+  awk '
+    { sub(/\r$/, "") }
+    NR == 1 && /^---/ { infm = 1; next }
+    infm == 1 && /^---/ { body = 1; next }
+    body
+  ' "$1" 2>/dev/null
+}
+
 DRY_RUN=0
 CHECK_ONLY=0
 for arg in "$@"; do
@@ -414,14 +430,49 @@ for role in $ROLES; do
     echo
     echo "## Definición del rol"
     echo
-    # Cuerpo del prompt del rol, sin el frontmatter YAML.
-    sed '1{/^---$/!q}; 1,/^---$/d' "$AGENTS_DIR/${role}.md" 2>/dev/null
+    # Cuerpo del prompt del rol, sin el frontmatter YAML (tolerante a CRLF).
+    extract_body "$AGENTS_DIR/${role}.md"
   } | write_file "$target"
+
 done
 
 # ---------------------------------------------------------------------------
-# 7. Resumen y verificación de coherencia ----------------------------------
+# 7. Verificacion de coherencia --------------------------------------
 # ---------------------------------------------------------------------------
+# Un adaptador que solo lleva la ley y NO el procedimiento de su rol parece
+# correcto (mismo frontmatter, 256 lineas) pero deja al agente sin instrucciones.
+# El defecto del CRLF vivio asi sin que nadie lo viera, porque `--check` comparaba
+# el generado contra si mismo. Este check mira el CONTENIDO, no el fichero.
+check_adapters_have_role_body() {
+  for role in $ROLES; do
+    src="$AGENTS_DIR/${role}.md"
+    target=".github/agents/${role}.agent.md"
+
+    # 1) el rol debe tener cuerpo mas alla del frontmatter
+    body_lines=$(extract_body "$src" | grep -c '[^[:space:]]' | tr -d ' ')
+    if [ "${body_lines:-0}" -eq 0 ]; then
+      fail "$src: no se pudo extraer el cuerpo del rol (¿frontmatter mal cerrado o CRLF inesperado?)"
+      DESYNC=1
+      continue
+    fi
+
+    # 2) el adaptador generado debe contener al menos las secciones clave del rol
+    [ -f "$target" ] || continue
+    missing=""
+    for section in '## Procedimiento' '## Límites'; do
+      if ! grep -qF "$section" "$target" 2>/dev/null; then
+        missing="$missing $section"
+      fi
+    done
+    if [ -n "$missing" ]; then
+      fail "$target: falta el procedimiento del rol ($missing). NO EDITAR A MANO. Ejecuta: bash scripts/sync-adapters.sh"
+      DESYNC=1
+    fi
+  done
+}
+
+check_adapters_have_role_body
+
 if [ "$CHECK_ONLY" -eq 1 ]; then
   echo
   if [ "$DESYNC" -eq 0 ]; then
