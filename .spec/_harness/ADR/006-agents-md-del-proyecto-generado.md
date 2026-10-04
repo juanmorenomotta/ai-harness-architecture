@@ -5,7 +5,7 @@
 - **Decisor**: Juan Moreno (responsable del harness)
 - **Feature**: `_harness`
 - **Cierra**: decisión abierta **A3** de `docs/propuesta-harness-instanciable.md`
-- **Tareas afectadas**: `AGENTS.md` (partición ley/parámetros), `instanciar-harness` (nuevo), `AGENTS.md` §4
+- **Tareas afectadas**: `AGENTS.md` (partición ley/parámetros), `scripts/instantiate_harness.py` (nuevo), `AGENTS.md` §4
 
 > **Nota de revisión (2026-09-28)**: este ADR hablaba del «`AGENTS.md` **del proyecto**». Con ADR-012
 > (un solo nivel de instanciación) ese ámbito se corrige a **«del repositorio instanciado»**: no existe
@@ -42,7 +42,7 @@ Consecuencias directas:
 
 1. **§4 deja de ser ley y pasa a ser parámetro.** La estructura del repositorio se resuelve desde la
    configuración, no desde el texto de la ley.
-2. **El drift se controla con un check, no con disciplina**: `instanciar-harness --check` falla si el
+2. **El drift se controla con un check, no con disciplina**: `instantiate_harness.py --check` falla si el
    `AGENTS.md` del proyecto no corresponde a la versión declarada del harness. Misma forma que
    `sync-adapters.sh --check`, que ya existe.
 3. **La ley no se puede editar en el proyecto** (R4 se preserva): el proyecto puede cambiar sus
@@ -83,7 +83,7 @@ y el check de sincronización ya están probados en producción.
 - El `AGENTS.md` del proyecto **no se puede editar a mano**. Si un proyecto necesita una regla
   distinta, el camino es promover el cambio al base o registrar un ADR en el proyecto — no editar.
   Es una restricción deliberada.
-- `instanciar-harness` necesita un generador y su modo `--check`. Es trabajo real, no un envoltorio.
+- `instantiate_harness.py` necesita un generador y su modo `--check`. Es trabajo real, no un envoltorio.
 - Cambiar la ley base exige **re-instanciar** los proyectos para que reciban el cambio. Esto hace
   visible el coste de actualización, que es precisamente el objetivo.
 
@@ -99,7 +99,8 @@ mantener.
 
 ## Cómo se verificará
 
-1. `instanciar-harness --check` sobre un proyecto instanciado → código 0 si está sincronizado.
+1. `python scripts/instantiate_harness.py --check <ruta>` sobre un proyecto instanciado → código 0 si
+   está sincronizado.
 2. **Prueba negativa**: editar a mano una regla en el `AGENTS.md` del proyecto y confirmar que
    `--check` **falla** señalando la divergencia.
 3. El `AGENTS.md` generado contiene §1–§3 y §5–§9 idénticas al base, y §4 resuelta con las rutas del
