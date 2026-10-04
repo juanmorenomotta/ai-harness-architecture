@@ -1,0 +1,33 @@
+# .harness/harness.version
+# ---------------------------------------------------------------------------
+# UNICO punto de verdad de la version del harness (ADR-004).
+#
+# Existe porque el harness tenia cinco versiones repartidas y ninguna representaba
+# al conjunto: podian divergir sin que nada lo detectara. Un proyecto instanciado
+# fija `harness` para saber de que version viene.
+#
+# `scripts/validate_harness.py` comprueba tres invariantes y FALLA si alguno se
+# rompe:
+#   a) `harness` es semver valido
+#   b) cada artefacto declara una version presente en `declared`
+#   c) la version REAL de cada artefacto coincide con su entrada en `declared`
+#
+# El invariante (c) es el que aporta el valor: detecta cambiar un artefacto SIN
+# registrarlo aqui. Sin el, este archivo seria documentacion, no un control.
+#
+# POLITICA DE INCREMENTO de `harness` (semver):
+#   major - cambia una regla de AGENTS.md (R1-R10) o un gate
+#   minor - se anade o elimina un rol, una skill o una politica
+#   patch - ajuste de configuracion sin cambio de contrato (modelo, umbral, timeout)
+# ---------------------------------------------------------------------------
+
+harness: "1.0.0"
+
+# Version declarada por cada artefacto, en su propio formato.
+# Al cambiar un artefacto hay que actualizar AMBAS entradas: la suya y esta.
+declared:
+  agents_contract: "1.0.0"   # AGENTS.md            -> "Versión del contrato"
+  config: "1.0.0"            # harness.config.json  -> version
+  models: "1.3.0"            # .harness/models.yaml -> version
+  providers: "1.1.0"         # .harness/providers.yaml -> version
+  routing: "1.0.0"           # .harness/routing.yaml   -> version

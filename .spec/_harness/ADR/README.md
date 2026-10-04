@@ -8,7 +8,7 @@ cambia, se escribe uno nuevo y el anterior pasa a `reemplazada por ADR-NNN`.
 | [001](./001-validar-modelos-contra-catalogo-del-runtime.md) | Validar el nombre del modelo contra el catálogo del runtime, no contra la API | `aceptada` | 2026-09-15 |
 | [002](./002-deepseek-v4-flash-como-verificador.md) | DeepSeek V4 Flash como modelo del rol `sdd-verifier` | `aceptada` | 2026-09-15 |
 | [003](./003-relacion-agente-skill-como-dato-verificable.md) | La relación agente ↔ skill es un dato verificable, declarado en una sola dirección | `aceptada` | 2026-09-25 |
-| [004](./004-identificador-unico-de-version-del-harness.md) | Identificador único de versión del harness (`.harness/harness.version` + check) | `aceptada` (impl. pendiente) | 2026-09-27 |
+| [004](./004-identificador-unico-de-version-del-harness.md) | Identificador único de versión del harness (`.harness/harness.version` + check) | `aceptada` (impl. hecha 2026-10-04) | 2026-09-27 |
 | [005](./005-un-solo-harness-base-especializacion-en-nivel-3.md) | Un solo harness base; la especialización por dominio vive en el nivel 3 | `aceptada` (impl. pendiente) | 2026-09-27 |
 | [006](./006-agents-md-del-proyecto-generado.md) | El `AGENTS.md` del proyecto es un artefacto generado | `aceptada` (impl. pendiente) | 2026-09-27 |
 | [007](./007-rol-harness-maintainer.md) | Rol `harness-maintainer`; `scripts/` no es escribible por el Developer | `aceptada` (impl. hecha 2026-10-04, pendiente de revisión humana) | 2026-09-27 |

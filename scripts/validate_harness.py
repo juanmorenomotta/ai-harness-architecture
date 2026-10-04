@@ -55,6 +55,19 @@ ROUTING_FILE = ".harness/routing.yaml"
 POLICIES_FILE = ".agents/policies/permissions.yaml"
 AGENTS_DIR = ".agents/agents"
 SKILLS_DIR = ".agents/skills"
+VERSION_FILE = ".harness/harness.version"
+
+# Artefactos cuya version declara el manifiesto, y donde vive esa version.
+# La clave es la que usa `.harness/harness.version` -> declared.
+VERSIONED_ARTIFACTS = {
+    "agents_contract": LAW_FILE,
+    "config": CONFIG_FILE,
+    "models": MODELS_FILE,
+    "providers": PROVIDERS_FILE,
+    "routing": ROUTING_FILE,
+}
+
+SEMVER = re.compile(r"^\d+\.\d+\.\d+$")
 
 # El orquestador es el único rol cuya definición ES la skill: no tiene prompt
 # propio en .agents/agents/, así que se auto-consume y no puede ser huérfana.
@@ -775,6 +788,95 @@ def check_harness_config(report: Report) -> None:
         report.error(f"{CONFIG_FILE}: protectedFiles debe incluir {LAW_FILE} y .harness/** (R4)")
 
 
+def semver_valid(value: str) -> bool:
+    """¿La cadena es un semver MAJOR.MINOR.PATCH?"""
+    return bool(SEMVER.match(value))
+
+
+def _artifact_version(artifact: str, relative: str) -> str | None:
+    """Version que un artefacto declara REALMENTE, en su propio formato.
+
+    Cada artefacto guarda su version a su manera (cabecera markdown, JSON, YAML),
+    asi que no vale un unico parser para los cinco.
+    """
+    path = ROOT / relative
+    if not path.exists():
+        return None
+
+    if artifact == "config":
+        try:
+            return str(json.loads(path.read_text(encoding="utf-8")).get("version") or "") or None
+        except (OSError, json.JSONDecodeError):
+            return None
+
+    if artifact == "agents_contract":
+        match = re.search(r"Versi[óo]n del contrato:\s*`([^`]+)`", path.read_text(encoding="utf-8"))
+        return match.group(1).strip() if match else None
+
+    try:
+        return str(harness_yaml.load(str(path)).get("version") or "") or None
+    except (OSError, ValueError):
+        return None
+
+
+def check_harness_version(report: Report) -> None:
+    """ADR-004: una sola version del harness que no diverja de sus artefactos.
+
+    Tres invariantes: (a) `harness` es semver valido; (b) cada artefacto tiene
+    entrada en `declared`; (c) la version REAL del artefacto coincide con la
+    declarada. El (c) es el que aporta el valor: detecta cambiar un artefacto SIN
+    registrarlo, que es la divergencia real. Sin el, el manifiesto solo se validaria
+    a si mismo y seria documentacion, no un control.
+    """
+    path = ROOT / VERSION_FILE
+    report.tick()
+    if not path.exists():
+        report.error(
+            f"falta {VERSION_FILE}: sin version del harness no se puede fijar al instanciar (ADR-004)"
+        )
+        return
+
+    try:
+        data = harness_yaml.load(str(path))
+    except (OSError, ValueError) as exc:
+        report.error(f"{VERSION_FILE} ilegible: {exc}")
+        return
+
+    report.tick()
+    harness = str(data.get("harness") or "").strip()
+    if not semver_valid(harness):
+        report.error(
+            f"{VERSION_FILE}: 'harness: {harness}' no es semver valido (MAJOR.MINOR.PATCH)"
+        )
+
+    declared = data.get("declared")
+    if not isinstance(declared, dict):
+        report.error(f"{VERSION_FILE}: falta el mapa 'declared' con la version de cada artefacto")
+        return
+
+    for artifact, relative in VERSIONED_ARTIFACTS.items():
+        report.tick()
+        if artifact not in declared:
+            report.error(f"{VERSION_FILE}: 'declared' no incluye '{artifact}' ({relative})")
+            continue
+
+        expected = str(declared[artifact]).strip()
+        actual = _artifact_version(artifact, relative)
+        if actual is None:
+            report.error(f"{relative}: no se pudo leer su version (¿cambio el formato?)")
+        elif actual != expected:
+            report.error(
+                f"{relative}: declara la version {actual}, pero {VERSION_FILE} dice {expected} "
+                f"para '{artifact}'. Actualiza el manifiesto en el mismo cambio (ADR-004)"
+            )
+
+    for artifact in sorted(set(declared) - set(VERSIONED_ARTIFACTS)):
+        report.warn(
+            f"{VERSION_FILE}: 'declared' incluye '{artifact}', que no corresponde a ningun "
+            "artefacto conocido. ¿Se renombro sin actualizar el manifiesto?"
+        )
+
+
 def check_no_secrets(report: Report) -> None:
     """R9: ninguna credencial en claro en la configuración del harness."""
     candidates = list((ROOT / ".harness").glob("*.yaml")) + [
@@ -827,6 +929,7 @@ def validate(report: Report) -> None:
     check_skills_referenced(report)
     check_adapters_synced(report, roles_cfg, alias_block)
     check_harness_config(report)
+    check_harness_version(report)
     check_no_secrets(report)
 
 
