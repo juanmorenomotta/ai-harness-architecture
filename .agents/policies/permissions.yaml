@@ -100,14 +100,17 @@ roles:
       - "scripts/**"
       - ".harness/**"
       - ".agents/**"
+      - "init.sh"
+      - "harness.config.json"
+    # Escritura limitada por `writable_paths`; `protected_paths` es la lista que NUNCA toca.
     protected_paths:
       - "AGENTS.md"
       - ".github/workflows/**"
-      - "init.sh"
-      - "harness.config.json"
     notes:
       - "Opera fuera del ciclo SDD: sin tasks/, revision humana obligatoria de su diff."
       - "Nunca se invoca para ajustar el harness tras un gate fallido de una feature (R4, R6, R7)."
+      - "init.sh y harness.config.json SI son escribibles (2026-10-04), pero el validador comprueba
+        que init.sh conserve sus checks obligatorios: el permiso no permite vaciar el gate (ADR-017)."
 
 # ---------------------------------------------------------------------------
 # Denegaciones globales: aplican a TODOS los roles, sin excepción.

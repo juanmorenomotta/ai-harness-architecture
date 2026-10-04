@@ -277,16 +277,16 @@ repos** y el gate **G4** de compatibilidad. Activa `sdd-security-reviewer`, **qu
 
 | # | Pendiente | Estado | ADR |
 | :--- | :--- | :--- | :--- |
-| 5 | **Rama PHP en `init.sh`** (Pint, PHPStan/Larastan, `vendor/bin/phpunit`) | ⚠️ **Bloqueado por alcance** | 009 |
+| 5 | **Rama PHP en `init.sh`** (Pint, PHPStan/Larastan, `vendor/bin/phpunit`) | ✅ **Desbloqueado** (ADR-017) | 009 |
 | 6 | **`validator-runner`**: reclasificar como **chore**, no feature | Pendiente | — |
 | 7 | **Separar identidades** agente/humano (PAT o GitHub App de menor privilegio) | Pendiente | 011 |
 | 8 | **`CODEOWNERS` + `ownership`** en el `template.yaml` | Pendiente | 013 |
-| 9 | **Gate G4** en `harness.config.json` | ⚠️ **Bloqueado por alcance** | 013 |
+| 9 | **Gate G4** en `harness.config.json` | ✅ **Desbloqueado** (ADR-017) | 013 |
 | 10 | **Extender el validador**: coherencia de versiones ✅ · sincronización del `AGENTS.md` generado ❌ | 🔶 **Parcial** | 004, 006 |
-| 11 | **`harness.config.json`: `"name": "deepseek-harness"`** → identidad real | ⚠️ **Bloqueado por alcance** · **precondición del 3** | 006 |
+| 11 | **`harness.config.json`: `"name": "deepseek-harness"`** → identidad real | ✅ **Desbloqueado** · **precondición del 3** | 006 |
 | 12 | **Suite de conformidad de templates** | Pendiente | 013 |
 | 13 | **Limpiar `.spec/_harness/diagnostic.md:94`** | Pendiente (menor) | 010 |
-| 14 | **Probar el aislamiento del subagente** en el selector | ✅ **HECHO 2026-10-04** | — |
+| 14 | **Probar el aislamiento del subagente** en el selector | ✅ **HECHO 2026-10-04** | 016 |
 | 15 | **AGENTS.md §6**: precisar el mecanismo del arranque en frío (conversación nueva) | Pendiente → **PR humana** (R4 + bump de versión) | 016 |
 
 Detalle del pendiente 5: `init.sh` detecta `composer.json` pero **no tiene rama PHP** en
@@ -305,7 +305,7 @@ no sabe qué es D-1 y va a buscarlo a disco. Registrado en **ADR-016**, con la r
 | # | Decisión | Bloquea | Opciones |
 | :--- | :--- | :--- | :--- |
 | **D-1** | **Origen del harness base** para el instanciador | PENDIENTE 3 | **D (extraer del propio árbol con `git archive`)** ← recomendada · A (copia local) · B (clonar por tag) · C (`git archive` de una ref remota) |
-| **D-4** | ¿Se **amplía el alcance** del `harness-maintainer` a `init.sh` y `harness.config.json`? | Pendientes 5, 9 y 11 | **Sí** (PR de harness) · No (PR humana cada vez) |
+| **D-4** | ¿Se **amplía el alcance** del `harness-maintainer` a `init.sh` y `harness.config.json`? | ✅ **RESUELTA: SÍ** (ADR-017, 2026-10-04) | — |
 | **D-3** | ¿Se **reclasifica `validator-runner`** como chore y se archiva su `scope.md`? | PENDIENTE 6 | — |
 
 **D-2 (¿`auth-service` como `cross` o reducido?) quedó RESUELTA**: ADR-009 revisado lo define como
