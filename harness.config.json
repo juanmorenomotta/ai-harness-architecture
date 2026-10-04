@@ -2,7 +2,7 @@
   "$schema": "./.harness/harness.config.schema.json",
   "version": "1.0.0",
   "repository": {
-    "name": "deepseek-harness",
+    "name": "ai-harness-architecture",
     "defaultBranch": "main",
     "protectedBranches": ["main", "develop", "release/*"],
     "language": "es",

@@ -283,8 +283,9 @@ repos** y el gate **G4** de compatibilidad. Activa `sdd-security-reviewer`, **qu
 | 8 | **`CODEOWNERS` + `ownership`** en el `template.yaml` | Pendiente | 013 |
 | 9 | **Gate G4** en `harness.config.json` | ✅ **Desbloqueado** (ADR-017) | 013 |
 | 10 | **Extender el validador**: coherencia de versiones ✅ · sincronización del `AGENTS.md` generado ❌ | 🔶 **Parcial** | 004, 006 |
-| 11 | **`harness.config.json`: `"name": "deepseek-harness"`** → identidad real | ✅ **Desbloqueado** · **precondición del 3** | 006 |
+| 11 | **`harness.config.json`: identidad del repo** | ✅ **HECHO 2026-10-04** (`deepseek-harness` → `ai-harness-architecture`) | 018 |
 | 12 | **Suite de conformidad de templates** | Pendiente | 013 |
+| 16 | **`$schema` colgante** en `harness.config.json` (apunta a un esquema inexistente): crearlo o quitar la línea | Pendiente (menor) | 018 |
 | 13 | **Limpiar `.spec/_harness/diagnostic.md:94`** | Pendiente (menor) | 010 |
 | 14 | **Probar el aislamiento del subagente** en el selector | ✅ **HECHO 2026-10-04** | 016 |
 | 15 | **AGENTS.md §6**: precisar el mecanismo del arranque en frío (conversación nueva) | Pendiente → **PR humana** (R4 + bump de versión) | 016 |
@@ -430,7 +431,7 @@ Nota sobre **D-1**: con la versión `1.0.0` ya creada (ADR-004), la opción **B*
 | [`docs/inicio-harness-sdd.md`](./inicio-harness-sdd.md) | Arranque general + **guía paso a paso** de las fases 0–7 |
 | [`docs/propuesta-harness-instanciable.md`](./propuesta-harness-instanciable.md) | Modelo de instanciación, decisiones D1–D3, abiertas A1–A7, anexos A3/A4 |
 | [`docs/desacoplamiento-arquitectura-software.md`](./desacoplamiento-arquitectura-software.md) | Diseño del eje de stack: `stack.md`, `template.yaml`, `agent_profile.md` |
-| [`.spec/_harness/ADR/README.md`](../.spec/_harness/ADR/README.md) | **Índice de los 16 ADR** |
+| [`.spec/_harness/ADR/README.md`](../.spec/_harness/ADR/README.md) | **Índice de los 18 ADR** |
 | `.spec/validator-runner/scope.md` | Feature **varada** con 5 supuestos abiertos (ver PENDIENTE 6) |
 
 ---
