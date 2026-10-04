@@ -33,6 +33,26 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
+# Windows redirige la salida en cp1252 (no UTF-8): los simbolos de marca pueden provocar
+# UnicodeEncodeError. Misma solucion que validate_harness.py: recordar la codificacion para
+# elegir simbolos representables, con degradacion a ASCII.
+_ORIGINAL_ENCODING = getattr(sys.stdout, "encoding", None) or "ascii"
+
+try:  # pragma: no cover - red de seguridad
+    sys.stdout.reconfigure(errors="replace")  # type: ignore[attr-defined]
+    sys.stderr.reconfigure(errors="replace")  # type: ignore[attr-defined]
+except (AttributeError, OSError, ValueError):  # pragma: no cover
+    pass
+
+
+def _mark(ok: bool) -> str:
+    """Simbolo de marca, con degradacion a ASCII si la salida no lo admite."""
+    try:
+        ("✔" if ok else "✘").encode(_ORIGINAL_ENCODING)
+    except (UnicodeEncodeError, LookupError, TypeError):
+        return "OK" if ok else "X"
+    return "✔" if ok else "✘"
+
 CONFIG_FILE = "harness.config.json"
 LAW_FILE = "AGENTS.md"
 VERSION_FILE = ".harness/harness.version"
@@ -70,7 +90,7 @@ def run(args: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess
 
 
 def die(message: str, code: int = 1) -> None:
-    print(f"  ✘ {message}", file=sys.stderr)
+    print(f"  {_mark(False)} {message}", file=sys.stderr)
     sys.exit(code)
 
 
@@ -351,14 +371,17 @@ def check_instance(target: Path) -> int:
                 )
 
     for problem in problems:
-        print(f"  ✘ {problem}")
+        print(f"  {_mark(False)} {problem}")
 
     if problems:
         print(f"\n== INSTANCIA INCOHERENTE: {len(problems)} problema(s) ==")
         return 1
 
     version = (provenance or {}).get("harness", "?")
-    print(f"  ✔ {LAW_FILE} generado, §4 presente y procedencia declarada (harness {version})")
+    print(
+        f"  {_mark(True)} {LAW_FILE} generado, §4 presente y procedencia declarada "
+        f"(harness {version})"
+    )
     print("\n== INSTANCIA COHERENTE ==")
     return 0
 
@@ -381,23 +404,23 @@ def instantiate(name: str, target: Path) -> int:
     print(f"  · harness {prov.harness} · commit {prov.commit[:12]}")
 
     extract(target)
-    print("  ✔ extraído de git archive HEAD")
+    print(f"  {_mark(True)} extraído de git archive HEAD")
 
     removed = clean_inheritance(target)
     if removed:
-        print(f"  ✔ herencia limpiada: {', '.join(removed)}")
+        print(f"  {_mark(True)} herencia limpiada: {', '.join(removed)}")
 
     resolve_identity(target, name, "main")
-    print(f"  ✔ identidad resuelta: name={name}, defaultBranch=main")
+    print(f"  {_mark(True)} identidad resuelta: name={name}, defaultBranch=main")
 
     generate_law(target, name, prov)
-    print(f"  ✔ {LAW_FILE} generado (ley base + §4 del componente)")
+    print(f"  {_mark(True)} {LAW_FILE} generado (ley base + §4 del componente)")
 
     write_provenance(target, name, prov)
     write_readme(target, name, prov)
 
     init_repository(target, name)
-    print("  ✔ repositorio inicializado con su propia historia")
+    print(f"  {_mark(True)} repositorio inicializado con su propia historia")
 
     print(f"\n== INSTANCIA CREADA: {target} ==")
     print("Siguiente paso: abrir VS Code EN EL COMPONENTE y lanzar sdd-init en conversación nueva.")
