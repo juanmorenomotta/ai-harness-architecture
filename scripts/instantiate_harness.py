@@ -121,24 +121,32 @@ def extract(target: Path) -> None:
     Se usa `git archive | tar -x` en lugar de `git clone` por dos motivos: el repositorio es
     privado (un clone exigiría credenciales, prohibidas en disco por R9) y `archive` toma
     exactamente el commit, sin historial ni referencias remotas.
+
+    OJO: `git archive` produce un **tar binario**. Capturarlo como texto (`text=True`) falla
+    al decodificar, así que se trabaja con bytes de principio a fin.
     """
     if target.exists() and any(target.iterdir()):
         die(f"el destino ya existe y no está vacío: {target}")
 
+    archive = subprocess.run(
+        ["git", "archive", "--format=tar", "HEAD"], cwd=str(ROOT), capture_output=True, check=False
+    )
+    if archive.returncode != 0:
+        die(f"git archive falló: {archive.stderr.decode('utf-8', errors='replace').strip()}")
+    if not archive.stdout:
+        die("git archive no devolvió contenido: ¿el commit HEAD está vacío?")
+
     target.mkdir(parents=True, exist_ok=True)
 
-    archive = run(["git", "archive", "--format=tar", "HEAD"])
-    if archive.returncode != 0:
-        die(f"git archive falló: {archive.stderr.strip()}")
-
-    extract_proc = subprocess.run(
-        ["tar", "-x", "-C", str(target)],
-        input=archive.stdout.encode("utf-8", errors="replace"),
-        capture_output=True,
-        check=False,
+    extracted = subprocess.run(
+        ["tar", "-x", "-C", str(target)], input=archive.stdout, capture_output=True, check=False
     )
-    if extract_proc.returncode != 0:
-        die(f"tar falló al extraer: {extract_proc.stderr.decode(errors='replace').strip()}")
+    if extracted.returncode != 0:
+        shutil.rmtree(target, ignore_errors=True)
+        die(
+            "tar falló al extraer; se limpió el destino parcial: "
+            f"{extracted.stderr.decode('utf-8', errors='replace').strip()}"
+        )
 
 
 def clean_inheritance(target: Path) -> list[str]:
