@@ -286,30 +286,127 @@ pasos con 👤 son tuyos y no los puede hacer un agente (gates humanos y operaci
 ### Dónde vive cada cosa (antes de empezar)
 
 ```
-a:\jmm\libros\AI-First\ai-harness-architecture\   ← EL HARNESS (el framework)
-                                                   Contiene su propia .spec/ (del framework).
-                                                   NO contiene componentes.
-
-a:\proyectos\auth-service\                         ← EL COMPONENTE (repo nuevo)
-                                                   Su propio AGENTS.md, su .harness/, su .spec/.
-                                                   Instanciado DESDE el harness.
+a:\proyectos\                        ← EL WORKSPACE (carpeta simple, NO es un repo git)
+│                                       Es local y tuyo: agrupa los componentes de una aplicación.
+├── ai-harness-architecture\         ← EL HARNESS (el framework, clonado de GitHub)
+│                                       Contiene su propia .spec/ (del framework).
+│                                       NO contiene componentes.
+├── api-service\                     ← COMPONENTE (su propio repo git)
+├── web-portal\                      ← COMPONENTE (su propio repo git)
+└── auth-service\                    ← COMPONENTE (su propio repo git)
 ```
 
-**Regla**: un artefacto de `auth-service` nunca se escribe dentro de `ai-harness-architecture`.
+**Reglas**:
+
+1. **Todos son repositorios git independientes** (ADR-012). El workspace **no** es un repo: es solo
+   una carpeta que los agrupa. No tiene `.git`, no se versiona.
+2. **Un artefacto de un componente nunca se escribe dentro de `ai-harness-architecture`.**
+3. El harness se clona **una vez** en el workspace; los componentes se **instancian** desde él.
+
+> **Por qué el workspace es local**: ADR-012 lo llama «manifiesto de workspace» — sirve para saber qué
+> componentes tienes y en qué versión del harness van. Es tuyo, no se versiona y no es un nivel de la
+> arquitectura.
+
+### Arranque desde cero (si aún no tienes el harness clonado)
+
+Esta subsección es para **empezar en una máquina nueva**. Si ya tienes el harness clonado y el
+componente creado, salta directamente a la Fase 0.
+
+### Paso 0.1 — Crear la carpeta del workspace (👤 humano)
+
+```bash
+mkdir A:\proyectos
+cd A:\proyectos
+```
+
+### Paso 0.2 — Clonar el harness desde GitHub (👤 humano)
+
+```bash
+git clone https://github.com/juanmorenomotta/ai-harness-architecture.git
+cd ai-harness-architecture
+```
+
+> El repositorio es **privado**: Git Credential Manager abrirá el navegador la primera vez. No escribas
+> tokens en ningún archivo (R9).
+
+> **El harness se clona**, no se instancia: es la fábrica. Lo que se instancia son los **componentes**
+> (ADR-012).
+
+### Paso 0.3 — Actualizar el harness antes de instanciar (👤 humano)
+
+```bash
+git pull
+```
+
+> ⚠️ **Esta es la trampa que más se olvida.** Si no haces `pull`, el componente nace de la versión que
+> clonaste, no de la actual. El script te dirá de qué commit extrae, así que puedes comprobarlo en su
+> salida.
+
+### Paso 0.4 — Instanciar el componente (👤 humano)
+
+Desde la raíz del harness clonado:
+
+```bash
+python scripts/instantiate_harness.py --name api-service --target ..\api-service
+```
+
+- `--target ..\api-service` crea el componente **como hermano** del harness, dentro del workspace.
+- **No se pasa `--harness-version`**: el script lee la versión y el commit **de su propio árbol**
+  (ADR-019). Por eso el `pull` del paso anterior importa.
+- Exige que **no haya cambios rastreados sin commitear** en el harness; si los hay, bloquea con exit 2.
+
+Repite este paso **por cada componente**:
+
+```bash
+python scripts/instantiate_harness.py --name web-portal --target ..\web-portal
+python scripts/instantiate_harness.py --name auth-service --target ..\auth-service
+```
+
+### Paso 0.5 — Verificar la instancia (👤 humano)
+
+```bash
+python scripts/instantiate_harness.py --check ..\api-service
+```
+
+✅ Debe decir **INSTANCIA COHERENTE**. Comprueba que la ley lleva la marca de generado, que §4 existe y
+que la procedencia está registrada.
+
+### Paso 0.6 — Abrir VS Code EN EL COMPONENTE
+
+```bash
+code ..\api-service
+```
+
+> **No abras el harness para trabajar en un componente.** Cada componente tiene su propio `AGENTS.md`,
+> su `.agents/` y su `.spec/`. Trabajar en el árbol equivocado es el error que costó corregir la guía
+> el 2026-09-28.
+
+A partir de aquí, continúa en **§7, Fase 1** (lanzar `sdd-init` en conversación nueva).
+
+### Resumen del arranque
+
+| Paso | Qué | Resultado |
+| :--- | :--- | :--- |
+| 0.1 | Crear `A:\proyectos` | Workspace (carpeta simple) |
+| 0.2 | `git clone` del harness | El framework, dentro del workspace |
+| 0.3 | `git pull` | El harness al día |
+| 0.4 | `instantiate_harness.py` por componente | Un repo por componente |
+| 0.5 | `--check` | Instancia coherente |
+| 0.6 | `code <componente>` | VS Code en el árbol correcto |
 
 ---
 
 ### Fase 0 — Instanciar el componente — ✅ **HECHO 2026-10-04**
 
-👤 **Paso 0.1 — El componente ya existe** en `a:\proyectos\auth-service`. No hay que crearlo.
+👤 **Paso 0.1 — El componente ya existe** en `A:\proyectos\auth-service`. No hay que crearlo.
 
 Si necesitas crear **otro** componente (o rehacer este), el comando es:
 
 ```bash
-cd a:\jmm\libros\AI-First\ai-harness-architecture
+cd A:\proyectos\ai-harness-architecture
 python scripts/instantiate_harness.py \
     --name <nombre-componente> \
-    --target a:\proyectos\<nombre-componente>
+    --target ..\<nombre-componente>
 ```
 
 > **Nota**: el script se llama **`instantiate_harness.py`** y no recibe `--harness-version`: lee la
@@ -319,7 +416,7 @@ python scripts/instantiate_harness.py \
 Para comprobar que una instancia sigue coherente:
 
 ```bash
-python scripts/instantiate_harness.py --check a:\proyectos\auth-service
+python scripts/instantiate_harness.py --check ..\auth-service
 ```
 
 ✅ **Verificado el 2026-10-04**: el componente tiene identidad propia (`name: auth-service`), `.spec/`
@@ -370,7 +467,7 @@ puedan consumir. Funcionalidad:
 **Qué hace el agente**: lee `AGENTS.md`, carga la skill `spec-authoring`, y escribe
 `.spec/auth-core/scope.md` **en el repositorio del componente**. Después **se detiene solo**.
 
-✅ **Verificar**: existe `a:\proyectos\auth-service\.spec\auth-core\scope.md` con criterios `AC-N`
+✅ **Verificar**: existe `A:\proyectos\auth-service\.spec\auth-core\scope.md` con criterios `AC-N`
 verificables.
 
 > **Nota sobre el nombre**: el repo es `auth-service` y la feature del primer corte es `auth-core`.
@@ -535,8 +632,8 @@ consumidor necesita saber **qué versión** consumir y **dónde probar**. Sin es
 
 ## 9. Trampas conocidas (evitar repetir errores ya cometidos)
 
-Van **cuatro ocurrencias** del mismo fallo en este repositorio: **un dato crítico en copias que
-divergen en silencio**.
+Van **siete ocurrencias** del mismo fallo en este repositorio: **un dato crítico o una garantía que
+no se comprueba**.
 
 | # | Caso | Dónde quedó registrado |
 | :--- | :--- | :--- |
@@ -545,10 +642,13 @@ divergen en silencio**.
 | 3 | Vínculos **agente ↔ skill** escritos en prosa, sin check. 3 de 8 incompletos | ADR-003 |
 | 4 | **Cinco versiones** del harness independientes, sin coordinación | ADR-004 |
 | 5 | **Garantía aparente**: protección de rama inerte; un `SKIP` contado como `PASS` | ADR-011 |
+| 6 | **Un check que no puede fallar**: `--check` comparaba el generado consigo mismo | ADR-015 |
+| 7 | **Un protocolo sin mecanismo**: «no asumas contexto» exige conversación nueva | ADR-016 |
 
-**Dos lecciones transversales**:
+**Tres lecciones transversales**:
 - *Un validador que nunca ha fallado no ha demostrado nada.*
 - *Un límite es real cuando es **capacidad ausente**, no cuando es una instrucción.*
+- *Un check solo es real cuando **mira algo distinto de sí mismo**.*
 
 ### Otras trampas verificadas
 
@@ -569,7 +669,7 @@ divergen en silencio**.
 | [`docs/pendientes.md`](./pendientes.md) | **Ayuda memoria de traspaso**: los 4 bloqueos, pendientes menores y decisiones abiertas |
 | [`docs/propuesta-harness-instanciable.md`](./propuesta-harness-instanciable.md) | Modelo de instanciación, decisiones D1–D3, abiertas A1–A7, anexos A3/A4 |
 | [`docs/desacoplamiento-arquitectura-software.md`](./desacoplamiento-arquitectura-software.md) | Diseño del eje de stack: `stack.md`, `template.yaml`, `agent_profile.md` |
-| [`.spec/_harness/ADR/README.md`](../.spec/_harness/ADR/README.md) | Índice de los **14 ADR** |
+| [`.spec/_harness/ADR/README.md`](../.spec/_harness/ADR/README.md) | Índice de los **19 ADR** |
 | [`.spec/validator-runner/scope.md`](../.spec/validator-runner/scope.md) | Feature **varada**: reclasificar como chore (5 supuestos ABIERTOS) |
 
 ---
@@ -595,7 +695,7 @@ divergen en silencio**.
 
 ## 12. Siguiente acción concreta
 
-**El paso 4 del orden NO es ejecutable todavía.** Antes hay que crear la pieza que falta.
+**El paso 6 (el ciclo SDD del componente) es ejecutable.** No queda ningún bloqueo de harness.
 
 ```
 1. [HECHO]  Remoto privado, push y protección de rama (inerte, ADR-011)
