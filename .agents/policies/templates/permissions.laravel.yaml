@@ -1,0 +1,176 @@
+# .agents/policies/templates/permissions.laravel.yaml
+# ---------------------------------------------------------------------------
+# PLANTILLA de política de permisos para un COMPONENTE Laravel (PHP).
+#
+# Es la especialización del `permissions.yaml` base del harness para el stack
+# Laravel. NO es la política del harness: es la que un humano copia a un
+# componente de aplicación instanciado (ADR-021).
+#
+# Diferencias respecto a la política base:
+#   1. NO incluye el rol `harness-maintainer`: es un rol del MOLDE, no de una
+#      instancia (ADR-021). El componente solo lleva los 5 roles SDD.
+#   2. `sdd-developer` escribe las rutas REALES de una app Laravel, no las
+#      genéricas `src/`/`lib/` del harness.
+#   3. Los manifiestos de dependencias (`composer.json`, `composer.lock`) NO
+#      están en `writable_paths`: añadirlos es un PR aprobado por humano
+#      (ADR-021).
+#
+# Principio: lo que no está explícitamente permitido, está prohibido.
+# ---------------------------------------------------------------------------
+
+version: "1.0.0"
+policy_model: "deny-first"
+
+# ---------------------------------------------------------------------------
+# Permisos por rol. `allow` es la lista blanca de tools del subagente.
+# ---------------------------------------------------------------------------
+roles:
+
+  sdd-init:
+    allow:
+      - read
+      - edit             # escribe SU artefacto: .spec/**/scope.md (writable_paths)
+      - search
+      - todo
+    writable_paths:
+      - ".spec/**/scope.md"
+
+  sdd-tech-lead:
+    allow:
+      - read
+      - edit
+      - search
+      - todo
+    writable_paths:
+      - ".spec/**/design.md"
+      - ".spec/**/tasks/**"
+      - ".spec/**/ADR/**"
+
+  sdd-developer:
+    allow:
+      - read
+      - edit
+      - search
+      - execute
+      - todo
+    deny:
+      - web
+      - agent
+    writable_paths:
+      # Árbol de una aplicación Laravel estándar.
+      - "app/**"
+      - "routes/**"
+      - "database/migrations/**"
+      - "database/seeders/**"
+      - "database/factories/**"
+      - "config/**"
+      - "resources/**"
+      - "public/**"
+      - "bootstrap/**"
+      - "tests/**"
+    # Rutas que NUNCA puede escribir, aunque estén bajo writable_paths.
+    protected_paths:
+      - "AGENTS.md"
+      - "harness.config.json"
+      - "init.sh"
+      - ".harness/**"
+      - ".agents/**"
+      - ".github/workflows/**"
+      - ".spec/**/verify.md"
+
+  sdd-verifier:
+    allow:
+      - read
+      - edit             # escribe SU artefacto: .spec/**/verify.md (writable_paths)
+      - search
+      - execute          # necesita correr ./init.sh y los tests
+      - todo
+    deny:
+      - agent
+    writable_paths:
+      - ".spec/**/verify.md"
+    notes:
+      - "`edit` existe SOLO para escribir verify.md: el resto de rutas las bloquea writable_paths."
+      - "El Verifier NO edita código: si algo falla, escribe FAIL y devuelve la tarea."
+
+  sdd-security-reviewer:
+    allow:
+      - read
+      - search
+      - web              # consultar CVEs/advisories
+    deny:
+      - edit
+      - execute
+    writable_paths: []   # reporta al Verifier; no escribe artefactos propios
+
+# ---------------------------------------------------------------------------
+# Denegaciones globales: aplican a TODOS los roles, sin excepción.
+# ---------------------------------------------------------------------------
+global_deny:
+
+  commands:
+    - pattern: "git push --force*"
+      reason: "Reescribe historia compartida."
+    - pattern: "git push -f*"
+      reason: "Reescribe historia compartida."
+    - pattern: "git reset --hard*"
+      reason: "Pierde trabajo no commiteado."
+    - pattern: "git clean -fdx*"
+      reason: "Borra archivos no rastreados."
+    - pattern: "git branch -D*"
+      reason: "Borrado forzado de rama."
+    - pattern: "git tag -d*"
+      reason: "Borrado de tag/release."
+    - pattern: "sudo *"
+      reason: "Escalada de privilegios."
+    - pattern: "rm -rf /*"
+      reason: "Borrado destructivo fuera del workspace."
+    - pattern: "chmod 777*"
+      reason: "Permisos inseguros."
+    - pattern: "curl * | sh"
+      reason: "Ejecución de código remoto sin verificación."
+    - pattern: "wget * | sh"
+      reason: "Ejecución de código remoto sin verificación."
+    - pattern: "npm install -g*"
+      reason: "Dependencia global altera el entorno del sistema."
+    - pattern: "pip install --user*"
+      reason: "Instalación fuera del entorno virtual del proyecto."
+    - pattern: "* --no-verify*"
+      reason: "Salta hooks de verificación (viola R6)."
+    - pattern: "export *KEY=*"
+      reason: "Riesgo de filtrado de credenciales en logs (R9)."
+
+  paths:
+    - pattern: "AGENTS.md"
+      reason: "R4: la ley solo cambia por PR humano explícito."
+    - pattern: ".harness/**"
+      reason: "R4: configuración del harness protegida."
+    - pattern: ".agents/**"
+      reason: "R4: definición de roles y política protegida."
+    - pattern: ".github/workflows/**"
+      reason: "Cambiar CI desde una tarea es un vector de bypass del gate."
+    - pattern: ".git/**"
+      reason: "Corrupción del repositorio."
+    - pattern: "**/.env"
+      reason: "R9: no se tocan archivos de secretos."
+    - pattern: "**/*.pem"
+      reason: "R9: material criptográfico."
+    - pattern: "**/id_rsa*"
+      reason: "R9: claves privadas."
+
+# ---------------------------------------------------------------------------
+# Escalado: cuando una acción está denegada, el agente NO improvisa.
+# ---------------------------------------------------------------------------
+on_denied:
+  action: "block_and_escalate"
+  message_template: >
+    BLOQUEO: acción denegada por política ({rule}).
+    Evidencia: {evidence}. Necesito: aprobación humana explícita (ver AGENTS.md §7).
+
+# Rutas de escalado humano (gates LGTM)
+escalation:
+  gates:
+    G1: { from: "scope.md",    to: "design.md",      approver: "product-owner" }
+    G2: { from: "design.md",   to: "implementation", approver: "tech-lead" }
+    G3: { from: "verify.md",   to: "merge",          approver: "reviewer" }
+  rule: "Un agente nunca aprueba su propio gate."
