@@ -214,6 +214,52 @@ Informe completo: [`.spec/_harness/diagnostic.md`](./.spec/_harness/diagnostic.m
 
 ---
 
+## Workspace de desarrollo (layout, comandos y agentes)
+
+El harness gobierna componentes que viven **junto a él** en una carpeta de workspace sin
+versionar (ADR-020):
+
+```
+workspace/                     ← carpeta padre, NO es un repo git
+├── ai-harness-architecture/   ← este repo: ley, agentes, políticas y herramientas
+├── backend/                   ← componente (instancia: ley + gate + .spec/, SIN agentes)
+├── frontend/                  ← componente (idem)
+└── .vscode/                   ← comandos y agentes del workspace (copia MANUAL, ver abajo)
+```
+
+**Los agentes no se duplican en los componentes** (ADR-022). El desarrollo se gobierna
+desde el harness: el humano abre VS Code en la **raíz del workspace**, selecciona el agente
+del harness en el chat y le indica en el prompt a qué componente aplica la feature
+(ej. *"Feature `qr-publico`, componente backend: …"*). El agente escribe los artefactos en
+`<componente>/.spec/<feature>/`. Una fase = una conversación nueva (ADR-016).
+
+### Paso manual obligatorio: el `.vscode` del workspace
+
+El harness no escribe fuera de sí mismo. Copia la plantilla **una sola vez** por workspace:
+
+```powershell
+Copy-Item -Recurse ai-harness-architecture/templates/workspace/.vscode ./.vscode
+```
+
+| Archivo | Qué habilita |
+| :--- | :--- |
+| `settings.json` | Los agentes del harness en el chat de Copilot (`chat.agentFilesLocations` → `ai-harness-architecture/.github/agents`) |
+| `tasks.json` | Comandos *Harness: …* — validar coherencia, sincronizar adaptadores, instanciar backend/frontend/genérico, verificar instancias — y *Gate: …* — `bash init.sh` de cada componente |
+
+Ajustes posibles tras copiar: la ruta de Git Bash en las tareas `bash`
+(`windows.options.shell.executable`) y los nombres de carpeta si tus componentes no se
+llaman `backend`/`frontend`.
+
+### Agregar un componente nuevo
+
+1. Ejecuta **Harness: instanciar componente (genérico)** (o el del stack, si existe).
+2. **PR humana en este repo**: agrega las rutas del componente a
+   `.agents/policies/permissions.yaml`. Los fragmentos de referencia por stack están en
+   [`templates/permissions/`](./templates/permissions/).
+3. Lanza `sdd-init` en conversación **nueva** (ADR-016), indicando el componente en el prompt.
+
+---
+
 ## Requisitos
 
 - **Bash** (Git Bash o WSL) para `init.sh` y `sync-adapters.sh`.

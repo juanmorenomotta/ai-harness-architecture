@@ -1,0 +1,18 @@
+// settings.json — Habilita los agentes del harness en el chat de Copilot
+// desde la RAIZ del workspace (ADR-022).
+//
+// Instalacion MANUAL (una vez por workspace): ver README.md del harness,
+// seccion "Workspace de desarrollo".
+//
+// Modelo: los agentes viven SOLO en ai-harness-architecture. Los componentes
+// (backend/, frontend/) no llevan agentes: son gobernados por los del harness.
+// El humano selecciona el agente en el chat e indica el componente en el prompt.
+{
+  "chat.agentFilesLocations": {
+    ".github/agents": true,
+    "ai-harness-architecture/.github/agents": true
+  },
+  "chat.promptFilesLocations": {
+    ".github/prompts": true
+  }
+}

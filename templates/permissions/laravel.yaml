@@ -1,0 +1,53 @@
+# templates/permissions/laravel.yaml
+# ---------------------------------------------------------------------------
+# FRAGMENTO DE REFERENCIA — stack Laravel (PHP). NO es una politica completa
+# y NO se copia a ningun componente (ADR-022: los componentes no llevan
+# agentes ni politicas; la UNICA politica vive en el harness).
+#
+# Uso: cuando se instancia un componente Laravel, un PR HUMANO agrega estas
+# rutas a `.agents/policies/permissions.yaml` del harness, sustituyendo
+# `<componente>` por la carpeta del componente en el workspace
+# (ej. `backend`).
+#
+# Notas:
+#   - Los manifiestos de dependencias (composer.json, composer.lock) quedan
+#     FUERA a proposito: escribirlos requiere una PR humana aparte.
+#   - init/tech-lead/verifier no cambian de stack: sus rutas son el patron
+#     `.spec/` del componente (ver la politica del harness).
+# ---------------------------------------------------------------------------
+
+stack: laravel
+
+# Rutas a agregar en roles.sdd-developer.writable_paths:
+sdd-developer-writable:
+  - "<componente>/app/**"
+  - "<componente>/routes/**"
+  - "<componente>/database/migrations/**"
+  - "<componente>/database/seeders/**"
+  - "<componente>/database/factories/**"
+  - "<componente>/config/**"
+  - "<componente>/resources/**"
+  - "<componente>/public/**"
+  - "<componente>/bootstrap/**"
+  - "<componente>/tests/**"
+
+# Rutas a agregar en roles.sdd-init.writable_paths:
+sdd-init-writable:
+  - "<componente>/.spec/**/scope.md"
+
+# Rutas a agregar en roles.sdd-tech-lead.writable_paths:
+sdd-tech-lead-writable:
+  - "<componente>/.spec/**/design.md"
+  - "<componente>/.spec/**/tasks/**"
+  - "<componente>/.spec/**/ADR/**"
+
+# Rutas a agregar en roles.sdd-verifier.writable_paths:
+sdd-verifier-writable:
+  - "<componente>/.spec/**/verify.md"
+
+# Gate del componente (init.sh), rama sugerida para este stack:
+gate-hints:
+  lint: "vendor/bin/pint --test"
+  format: "vendor/bin/pint --test"
+  typecheck: "vendor/bin/phpstan analyse --no-progress"
+  tests: "vendor/bin/phpunit"

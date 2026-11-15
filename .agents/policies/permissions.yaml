@@ -4,9 +4,18 @@
 # Principio: lo que no está explícitamente permitido, está prohibido.
 # Consumido por: agentes de rol (ver `tools:` en cada .md), adaptadores de CLI
 # y cualquier orquestador propio que lea esta política.
+#
+# ADR-022 — ANCLAJE DE RUTAS (leer antes de editar):
+#   Los agentes se ejecutan DESDE el harness con la RAIZ DEL WORKSPACE como cwd.
+#   - Roles SDD (init, tech-lead, developer, verifier): rutas relativas a la
+#     RAIZ DEL WORKSPACE, prefijadas por componente (backend/, frontend/,
+#     ai-harness-architecture/). Agregar un componente nuevo = agregar sus
+#     rutas aqui, por PR HUMANA (fragmentos por stack en templates/permissions/).
+#   - harness-maintainer: rutas relativas a la RAIZ DEL HARNESS, sin prefijo
+#     (mantiene el molde, no los componentes; el validador las exige exactas).
 # ---------------------------------------------------------------------------
 
-version: "1.0.0"
+version: "1.1.0"
 policy_model: "deny-first"
 
 # ---------------------------------------------------------------------------
@@ -17,12 +26,15 @@ roles:
   sdd-init:
     allow:
       - read
-      - edit             # escribe SU artefacto: .spec/**/scope.md (writable_paths)
+      - edit             # escribe SU artefacto: <componente>/.spec/**/scope.md
       - search
       - todo
     # `writable_paths` es el control real: `edit` es la tool, la ruta la limita la lista.
+    # Rutas relativas a la RAIZ DEL WORKSPACE (ADR-022).
     writable_paths:
-      - ".spec/**/scope.md"
+      - "backend/.spec/**/scope.md"
+      - "frontend/.spec/**/scope.md"
+      - "ai-harness-architecture/.spec/**/scope.md"   # features del propio harness
 
   sdd-tech-lead:
     allow:
@@ -31,9 +43,15 @@ roles:
       - search
       - todo
     writable_paths:
-      - ".spec/**/design.md"
-      - ".spec/**/tasks/**"
-      - ".spec/**/ADR/**"
+      - "backend/.spec/**/design.md"
+      - "backend/.spec/**/tasks/**"
+      - "backend/.spec/**/ADR/**"
+      - "frontend/.spec/**/design.md"
+      - "frontend/.spec/**/tasks/**"
+      - "frontend/.spec/**/ADR/**"
+      - "ai-harness-architecture/.spec/**/design.md"
+      - "ai-harness-architecture/.spec/**/tasks/**"
+      - "ai-harness-architecture/.spec/**/ADR/**"
 
   sdd-developer:
     allow:
@@ -46,31 +64,42 @@ roles:
       - web
       - agent
     writable_paths:
-      - "src/**"
-      - "tests/**"
-      - "lib/**"
-      - "app/**"
+      # --- Componente backend (Laravel) ---
+      - "backend/app/**"
+      - "backend/routes/**"
+      - "backend/database/**"
+      - "backend/config/**"
+      - "backend/resources/**"
+      - "backend/public/**"
+      - "backend/bootstrap/**"
+      - "backend/tests/**"
+      # --- Componente frontend (Vue 3 + Vite) ---
+      - "frontend/src/**"
+      - "frontend/public/**"
+      - "frontend/tests/**"
     # Rutas que NUNCA puede escribir, aunque estén bajo writable_paths.
     protected_paths:
-      - "AGENTS.md"
-      - "harness.config.json"
-      - "init.sh"
-      - ".harness/**"
-      - ".agents/**"
-      - ".github/workflows/**"
-      - ".spec/**/verify.md"
+      - "**/AGENTS.md"
+      - "**/harness.config.json"
+      - "**/init.sh"
+      - "**/.harness/**"
+      - "**/.agents/**"
+      - "**/.github/workflows/**"
+      - "**/.spec/**/verify.md"
 
   sdd-verifier:
     allow:
       - read
-      - edit             # escribe SU artefacto: .spec/**/verify.md (writable_paths)
+      - edit             # escribe SU artefacto: <componente>/.spec/**/verify.md
       - search
-      - execute          # necesita correr ./init.sh y los tests
+      - execute          # necesita correr init.sh del componente y los tests
       - todo
     deny:
       - agent
     writable_paths:
-      - ".spec/**/verify.md"
+      - "backend/.spec/**/verify.md"
+      - "frontend/.spec/**/verify.md"
+      - "ai-harness-architecture/.spec/**/verify.md"
     notes:
       - "`edit` existe SOLO para escribir verify.md: el resto de rutas las bloquea writable_paths."
       - "El Verifier NO edita código: si algo falla, escribe FAIL y devuelve la tarea."
@@ -86,6 +115,8 @@ roles:
     writable_paths: []   # reporta al Verifier; no escribe artefactos propios
 
   # Mantiene el harness (ADR-007). Es el UNICO rol con escritura sobre scripts/.harness/.agents.
+  # Sus rutas son relativas a la RAIZ DEL HARNESS (sin prefijo de workspace): el validador
+  # las exige exactas (ADR-022).
   harness-maintainer:
     allow:
       - read
@@ -152,6 +183,8 @@ global_deny:
   paths:
     - pattern: "AGENTS.md"
       reason: "R4: la ley solo cambia por PR humano explícito."
+    - pattern: "**/AGENTS.md"
+      reason: "ADR-022: la ley GENERADA de cada componente tampoco la toca un agente; se regenera re-instanciando."
     - pattern: ".harness/**"
       reason: "R4: configuración del harness protegida."
       except_roles: [harness-maintainer]

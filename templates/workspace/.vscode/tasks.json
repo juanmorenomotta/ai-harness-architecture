@@ -1,0 +1,125 @@
+// tasks.json — Comandos del workspace para gobernar el harness y sus componentes.
+// Instalacion MANUAL (una vez por workspace): ver README.md del harness,
+// seccion "Workspace de desarrollo".
+//
+// Convenciones:
+//   - Las tareas "python" corren en la shell por defecto (PowerShell en Windows).
+//   - Las tareas "bash" fijan Git Bash como shell; ajusta la ruta si difiere.
+//   - ${workspaceFolder} es la carpeta padre que contiene ai-harness-architecture/,
+//     backend/ y frontend/ (layout del ADR-020).
+//   - Tras instanciar un componente, queda un PENDIENTE humano: agregar sus rutas
+//     a .agents/policies/permissions.yaml del harness, por PR (ADR-022). Los
+//     fragmentos de referencia por stack estan en templates/permissions/.
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Harness: validar coherencia",
+      "detail": "python validate_harness.py — coherencia de las 4 capas del harness",
+      "type": "shell",
+      "command": "python ai-harness-architecture/scripts/validate_harness.py",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Harness: sincronizar adaptadores",
+      "detail": "sync-adapters.sh — regenera .github/agents, .claude, .gemini, .codex desde models.yaml",
+      "type": "shell",
+      "command": "bash ai-harness-architecture/scripts/sync-adapters.sh",
+      "options": { "cwd": "${workspaceFolder}" },
+      "windows": {
+        "options": {
+          "shell": {
+            "executable": "C:\\Program Files\\Git\\bin\\bash.exe",
+            "args": ["-lc"]
+          }
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Harness: instanciar backend (laravel)",
+      "detail": "Instancia el harness en backend/. Despues: PR humana agregando las rutas backend/** a permissions.yaml (fragmento: templates/permissions/laravel.yaml)",
+      "type": "shell",
+      "command": "python ai-harness-architecture/scripts/instantiate_harness.py --name cochera-backend --target ${workspaceFolder}/backend; if ($LASTEXITCODE -eq 0) { Write-Output 'PENDIENTE (PR humana): agregar rutas backend/** a .agents/policies/permissions.yaml del harness (fragmento: templates/permissions/laravel.yaml)' }",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Harness: instanciar frontend (vue)",
+      "detail": "Instancia el harness en frontend/. Despues: PR humana agregando las rutas frontend/** a permissions.yaml (fragmento: templates/permissions/vue.yaml)",
+      "type": "shell",
+      "command": "python ai-harness-architecture/scripts/instantiate_harness.py --name cochera-frontend --target ${workspaceFolder}/frontend; if ($LASTEXITCODE -eq 0) { Write-Output 'PENDIENTE (PR humana): agregar rutas frontend/** a .agents/policies/permissions.yaml del harness (fragmento: templates/permissions/vue.yaml)' }",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Harness: instanciar componente (generico)",
+      "detail": "Instancia un componente nuevo pidiendo nombre y carpeta. Despues aplica la PR de permisos (ADR-022)",
+      "type": "shell",
+      "command": "python ai-harness-architecture/scripts/instantiate_harness.py --name ${input:componentName} --target ${workspaceFolder}/${input:componentDir}; if ($LASTEXITCODE -eq 0) { Write-Output 'PENDIENTE (PR humana): agregar rutas del componente a .agents/policies/permissions.yaml del harness' }",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Harness: verificar instancia backend",
+      "detail": "instantiate_harness.py --check backend",
+      "type": "shell",
+      "command": "python ai-harness-architecture/scripts/instantiate_harness.py --check ${workspaceFolder}/backend",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Harness: verificar instancia frontend",
+      "detail": "instantiate_harness.py --check frontend",
+      "type": "shell",
+      "command": "python ai-harness-architecture/scripts/instantiate_harness.py --check ${workspaceFolder}/frontend",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Gate: backend (bash init.sh)",
+      "detail": "Unico gate de verificacion del componente backend (R6)",
+      "type": "shell",
+      "command": "bash init.sh",
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "windows": {
+        "options": {
+          "shell": {
+            "executable": "C:\\Program Files\\Git\\bin\\bash.exe",
+            "args": ["-lc"]
+          }
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Gate: frontend (bash init.sh)",
+      "detail": "Unico gate de verificacion del componente frontend (R6)",
+      "type": "shell",
+      "command": "bash init.sh",
+      "options": { "cwd": "${workspaceFolder}/frontend" },
+      "windows": {
+        "options": {
+          "shell": {
+            "executable": "C:\\Program Files\\Git\\bin\\bash.exe",
+            "args": ["-lc"]
+          }
+        }
+      },
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "componentName",
+      "type": "promptString",
+      "description": "Nombre del componente en kebab-case (identidad del repo, ej. cochera-reportes)"
+    },
+    {
+      "id": "componentDir",
+      "type": "promptString",
+      "description": "Carpeta destino relativa al workspace (ej. reportes)"
+    }
+  ]
+}

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Instancia el harness en un repositorio nuevo (ADR-006, ADR-012).
+"""Instancia el harness en un repositorio nuevo (ADR-006, ADR-012, ADR-022).
 
-Fabrica un repositorio de componente AUTOSUFICIENTE: ley, método, gate, `.spec/` propio y
-procedencia registrada. El componente resultante contiene todo lo necesario para su
-mantenimiento por cualquier actor, sin consultar el repositorio del harness.
+Fabrica un repositorio de componente GOBERNADO: ley, método, gate, `.spec/` propio y
+procedencia registrada. Desde ADR-022 el componente NO lleva agentes: los roles, skills,
+políticas y adaptadores viven solo en el harness, y el desarrollo del componente se gobierna
+desde el harness con el workspace como cwd (una conversación nueva por fase, ADR-016).
 
 Uso:
     python scripts/instantiate_harness.py --name auth-service --target a:\\proyectos\\auth-service
@@ -61,10 +62,20 @@ GENERATED_MARK = "<!-- GENERADO por scripts/instantiate_harness.py"
 
 # Artefactos que NO viajan al componente: son del framework, no de la instancia.
 # Llevarlos dentro seria arrastrar la historia de otro repositorio (ADR-012).
+# ADR-022: los agentes tampoco viajan — gobiernan desde el harness, y un componente
+# con una copia de los roles seria un dato critico en copias que divergen en silencio.
 HARNESS_ONLY_PATHS = (
     ".spec/_harness",      # los ADR del framework
     ".spec/validator-runner",
     "docs",                # documentacion del framework, no del componente
+    "templates",           # plantillas del molde (workspace/.vscode, permissions/)
+    ".agents",             # roles, skills y politicas: SOLO en el harness (ADR-022)
+    ".github/agents",      # adaptadores Copilot: SOLO en el harness (ADR-022)
+    ".claude",             # adaptadores de otros CLIs: SOLO en el harness
+    ".gemini",
+    ".codex",
+    ".env.harness",        # variables para orquestadores: generadas, del harness
+    "scripts",             # las herramientas se ejecutan desde el harness
 )
 
 # Secciones de la ley que un componente NO puede heredar tal cual.
@@ -210,6 +221,7 @@ def build_component_section(name: str, prov: Provenance) -> str:
 
     ADR-006: §4 deja de ser ley y pasa a ser parámetro, porque en un repositorio
     instanciado las rutas dependen del componente, no del método.
+    ADR-022: el componente no lleva agentes ni scripts; se gobierna desde el harness.
     """
     return f"""## 4. Estructura del repositorio (capas separadas)
 
@@ -218,12 +230,8 @@ def build_component_section(name: str, prov: Provenance) -> str:
 {CONFIG_FILE}         # Comandos detectados y gates de verificación.
 init.sh                     # Gate ejecutable: lint + tests + typecheck.
 .spec/                      # Artefactos SDD de ESTE componente (por feature).
-.agents/                    # DEFINICIÓN de roles (agnóstica de modelo).
-.harness/                   # CONFIGURACIÓN de ejecución (rol → modelo).
-.github/agents/             # Adaptadores para GitHub Copilot en VS Code.
-scripts/                    # Utilidades del harness instanciadas.
-src/                        # Código de {name}.
-tests/                      # Pruebas de {name}.
+.harness/                   # Procedencia y configuración heredada del harness.
+src/  tests/  ...           # Código de {name} (estructura según su stack).
 ```
 
 **Este repositorio es un COMPONENTE instanciado del harness, no el harness.**
@@ -233,13 +241,20 @@ tests/                      # Pruebas de {name}.
 - El contrato que exponga (si es un componente `cross`, ADR-013) es **suyo y versionado**;
   quien lo consuma lo referencia con pin, sin copiarlo (ADR-012).
 
+**Este componente NO contiene agentes** (ADR-022). Los roles, skills, políticas y
+adaptadores viven en el repositorio del harness, junto a este componente en el workspace.
+El desarrollo se gobierna desde el harness: el humano abre VS Code en la **raíz del
+workspace**, selecciona el agente del harness en el chat e indica este componente en el
+prompt. El agente escribe los artefactos en `.spec/<feature>/` de este repositorio.
+
 **El repositorio del harness es otro.** Este árbol nació de él y quedó enlazado por su
 procedencia; `harness.config.json` declara qué versión.
 
 **Procedencia**: harness **{prov.harness}** · commit `{prov.commit[:12]}`
 
-**Regla de capas (crítica):** la definición de rol (`.agents/agents/*.md`) **nunca** menciona un
-nombre de modelo. La asignación vive **solo** en `.harness/models.yaml`.
+**Regla de capas (crítica):** la definición de rol (`.agents/agents/*.md` del harness)
+**nunca** menciona un nombre de modelo. La asignación vive **solo** en
+`.harness/models.yaml` del harness.
 """
 
 
@@ -305,9 +320,13 @@ def write_readme(target: Path, name: str, prov: Provenance) -> None:
         "- **Gate**: `bash init.sh`\n\n"
         "## Empezar una feature\n\n"
         "```\n"
-        "1. Lanza `sdd-init` EN CONVERSACIÓN NUEVA (ADR-016) para escribir .spec/<feature>/scope.md\n"
-        "2. Aprueba el alcance (gate G1) escribiendo 'Aprobado por:' TÚ\n"
-        "3. Lanza `sdd-tech-lead` en otra conversación nueva\n"
+        "1. Abre VS Code en la RAÍZ del workspace (la carpeta que contiene el harness y\n"
+        "   este componente), NO en este repositorio (ADR-022).\n"
+        "2. En el chat, selecciona el agente `sdd-init` DEL HARNESS y pásale la\n"
+        f"   especificación indicando el componente: `{name}`.\n"
+        "3. El agente escribe .spec/<feature>/scope.md EN ESTE repositorio.\n"
+        "4. Aprueba el alcance (gate G1) escribiendo 'Aprobado por:' TÚ.\n"
+        "5. Cada fase SDD se lanza en una CONVERSACIÓN NUEVA (ADR-016).\n"
         "```\n\n"
         "Para actualizar la versión del harness, vuelve a instanciar desde el harness de origen.\n",
         encoding="utf-8",
@@ -423,7 +442,12 @@ def instantiate(name: str, target: Path) -> int:
     print(f"  {_mark(True)} repositorio inicializado con su propia historia")
 
     print(f"\n== INSTANCIA CREADA: {target} ==")
-    print("Siguiente paso: abrir VS Code EN EL COMPONENTE y lanzar sdd-init en conversación nueva.")
+    print(
+        "Siguiente paso: PR humana agregando las rutas del componente a "
+        ".agents/policies/permissions.yaml del harness (fragmentos por stack en "
+        "templates/permissions/). Despues, desde la raiz del workspace, lanzar sdd-init "
+        "en conversación nueva indicando el componente (ADR-016, ADR-022)."
+    )
     return 0
 
 

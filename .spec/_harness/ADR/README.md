@@ -25,7 +25,8 @@ cambia, se escribe uno nuevo y el anterior pasa a `reemplazada por ADR-NNN`.
 | [018](./018-identidad-del-repositorio-verificada.md) | La identidad del repositorio se declara y se verifica (dos severidades) | `aceptada` (impl. hecha 2026-10-04) | 2026-10-04 |
 | [019](./019-instanciador-extrae-del-propio-arbol.md) | El instanciador extrae del propio árbol (`git archive`) y verifica la instancia | `aceptada` (impl. hecha 2026-10-04) | 2026-10-04 |
 | [020](./020-un-clon-por-aplicacion.md) | **Un clon del harness por aplicación**; el workspace es una carpeta sin versionar | `aceptada` (impl. hecha 2026-10-04) | 2026-10-04 |
-| [021](./021-inyeccion-del-harness-en-componentes-y-permisos-por-stack.md) | Inyección del harness en componentes y permisos especializados por stack | `aceptada` (impl. pendiente) | 2026-11-14 |
+| [021](./021-inyeccion-del-harness-en-componentes-y-permisos-por-stack.md) | Inyección del harness en componentes y permisos especializados por stack | `aceptada` (parcialmente refinada por ADR-022) | 2026-11-14 |
+| [022](./022-agentes-solo-en-el-harness-y-vscode-del-workspace.md) | Los agentes gobiernan desde el harness; los componentes no llevan agentes; `.vscode` del workspace | `aceptada` (impl. hecha 2026-11-15) | 2026-11-15 |
 
 > Los ADR 004–010 responden a las decisiones abiertas **A1–A7** de
 > [`docs/propuesta-harness-instanciable.md`](../../../docs/propuesta-harness-instanciable.md).
