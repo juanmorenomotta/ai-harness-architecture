@@ -29,9 +29,9 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
-
 ROOT = Path(__file__).resolve().parent.parent
 
 # Windows redirige la salida en cp1252 (no UTF-8): los simbolos de marca pueden provocar
@@ -183,6 +183,24 @@ def extract(target: Path) -> None:
         )
 
 
+def _rmtree(path: Path, attempts: int = 5) -> None:
+    """rmtree tolerante a bloqueos transitorios de Windows (WinError 32).
+
+    Un watcher del editor o el antivirus puede retener un handle sobre un archivo
+    recién extraído durante unos milisegundos; sin reintento, la instanciación
+    falla aunque no haya nada mal. Defecto real encontrado el 2026-11-15 al
+    instanciar dentro del workspace abierto en VS Code.
+    """
+    for attempt in range(attempts):
+        try:
+            shutil.rmtree(path)
+            return
+        except PermissionError:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(0.5 * (attempt + 1))
+
+
 def clean_inheritance(target: Path) -> list[str]:
     """Quita del componente lo que pertenece al framework, no a la instancia."""
     removed: list[str] = []
@@ -191,7 +209,7 @@ def clean_inheritance(target: Path) -> list[str]:
         if not path.exists():
             continue
         if path.is_dir():
-            shutil.rmtree(path)
+            _rmtree(path)
         else:
             path.unlink()
         removed.append(relative)
@@ -199,7 +217,7 @@ def clean_inheritance(target: Path) -> list[str]:
     # El .spec/ del componente arranca vacío: sus artefactos son suyos (ADR-012).
     spec = target / ".spec"
     if spec.exists():
-        shutil.rmtree(spec)
+        _rmtree(spec)
     spec.mkdir()
     (spec / ".gitkeep").touch()
     return removed
