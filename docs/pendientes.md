@@ -4,9 +4,10 @@
 > [`inicio-harness-sdd.md`](./inicio-harness-sdd.md), que es el documento de arranque general; **este**
 > es la lista concreta de lo que falta por hacer.
 >
-> **Última actualización**: 2026-10-04 · **Sesión cerrada en**: commit `8ddcb17`
-> **Para retomar**: leer `AGENTS.md` → `inicio-harness-sdd.md` → este archivo → verificar el estado
-> real con los comandos de §1 (no fiarse de este texto: **caduca**).
+> **Última actualización**: 2026-11-15 · **Sesión cerrada en**: rama `chore/registrar-desviacion-flujo-rama`
+> **Para retomar**: leer `AGENTS.md` → **§7b de este archivo (reglas operativas permanentes)** →
+> `inicio-harness-sdd.md` → verificar el estado real con los comandos de §1 (no fiarse de este
+> texto: **caduca**).
 
 ---
 
@@ -14,15 +15,13 @@
 
 | Comprobación | Resultado |
 | :--- | :--- |
-| Rama | `main`, **sincronizada** con `origin/main` (0/0) |
-| Último commit | `8ddcb17 fix: copilot adapters carried the law but not the role procedure` |
+| Rama | `main` en `e33c548` + rama `chore/registrar-desviacion-flujo-rama` pendiente de merge humano |
+| Último commit en main | `e33c548 fix: retry rmtree on transient Windows file locks` |
 | Remoto | `origin` → `github.com/juanmorenomotta/ai-harness-architecture` (privado) |
-| `python scripts/validate_harness.py` | **123 comprobaciones, COHERENTE** (exit 0) |
-| `bash scripts/sync-adapters.sh --check` | **SINCRONIZADOS** (con check de contenido de rol) |
-| `bash init.sh` | **PASS** (con `lint`/`format`/`typecheck`/`tests` en **SKIP**) |
-| ADRs | **15** (001–015). Implementados: 004, 007, 015. Resto con implementación pendiente |
-| Sin commitear | `.spec/validator-runner/`, `docs/desacoplamiento-arquitectura-software.md` (previos, fuera a propósito) |
-| Componentes construidos | **NINGUNO** |
+| `python scripts/validate_harness.py` | **136 comprobaciones, COHERENTE** (exit 0) |
+| ADRs | **22** (001–022). Últimos: 021 (inyección en componentes), 022 (agentes solo en el harness) |
+| Flujo de trabajo | **Rama + PR siempre** (§7b). Prohibido commit directo a `main` |
+| Componentes construidos | **NINGUNO** (instanciación de backend/frontend: pendiente, usar tasks de `templates/workspace/.vscode`) |
 
 ### Comandos de verificación obligatorios al retomar
 
@@ -412,6 +411,47 @@ Nota sobre **D-1**: con la versión `1.0.0` ya creada (ADR-004), la opción **B*
   confiando en que se habían aplicado. **Verificar tras editar.**
 - **Un documento de estado caduca.** El documento daba el remoto por pendiente cuando ya existía.
   **Comprobar la realidad con comandos antes de actuar sobre lo que dice un documento.**
+
+---
+
+## 7b. Desviaciones registradas (2026-11-15) — LEER AL INICIAR CUALQUIER SESIÓN
+
+> **Para el agente**: esta sección es memoria operativa permanente. Léela antes de proponer
+> cualquier commit en este repositorio. Estas reglas aplican aunque el responsable apruebe
+> el trabajo en el chat.
+
+### Desviación 1 — Commits directos a `main` sin rama ni PR
+
+Los commits `b2d8091` (ADR-021), `99051f9` (ADR-022) y `e33c548` (fix rmtree) se hicieron
+**directamente sobre `main`** y se subieron con aprobación del responsable en el chat, sin
+rama ni PR. La aprobación humana existió; lo que faltó fue la **traza** (R3 + §3 de
+`AGENTS.md`). No se reescribe la historia: `git push --force` está en deny-first.
+
+**Regla operativa permanente** (vigente desde 2026-11-15, aprobada por el responsable):
+
+> **TODO cambio al harness va en rama** (`spec/<slug>`, `chore/<slug>`, `fix/<slug>`) +
+> push de la rama; **el humano mergea**. Sin excepciones, aunque el responsable apruebe en
+> el chat. El agente propone y prepara la rama; el humano fusiona. Esto aplica también a
+> los componentes instanciados (backend, frontend, …).
+
+### Desviación 2 — Cambios al harness sin ciclo SDD (R1)
+
+ADR-021 y ADR-022 se diseñaron en conversación y se implementaron **sin**
+`.spec/<feature>/scope.md`, `design.md` ni `tasks/`. R1 exige esos artefactos **antes** del
+código, también para el propio harness (dogfooding). No se crean artefactos retroactivos
+(sería evidencia falsa); se registra la desviación.
+
+**Regla operativa permanente**: la próxima feature del harness sigue el ciclo completo:
+`sdd-init` → **G1** → `sdd-tech-lead` → **G2** → `sdd-developer` → `sdd-verifier` → **G3**.
+Un cambio al harness no arranca con edición: arranca con `sdd-init` escribiendo
+`.spec/<feature>/scope.md` (ruta permitida: `ai-harness-architecture/.spec/**`, ver
+`permissions.yaml`).
+
+### Por qué estas dos desviaciones importan
+
+Son la misma lección que ADR-011 y ADR-015: **una regla sin traza es una regla inerte**.
+La aprobación en chat es real pero no deja artefacto; la rama+PR sí. Y el ciclo SDD sin
+`scope.md` es vibe coding con buen vocabulario.
 
 ---
 
